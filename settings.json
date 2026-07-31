@@ -1,0 +1,35 @@
+{
+  "model": "opus[1m]",
+  "theme": "dark",
+  "spinnerVerbs": {
+    "mode": "replace",
+    "verbs": [
+      "Discovering fire",
+      "Hunting",
+      "Smashing rock",
+      "Grunt thinking",
+      "Sharpening stick",
+      "Drawing on cave wall",
+      "Chasing mammoth",
+      "Inventing wheel",
+      "Oggling stick",
+      "Sniffing berry",
+      "Dragging log",
+      "Rubbing sticks",
+      "Picking lice",
+      "Banging rocks together",
+      "Collecting shrooms",
+      "Scratching head",
+      "Poking dead animal",
+      "Carrying big bone",
+      "Growling at sky",
+      "Hiding in bush",
+      "Painting hand on wall",
+      "Tasting mud"
+    ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "input=$(cat); model=$(echo \"$input\" | jq -r '.model.display_name'); dir=$(echo \"$input\" | jq -r '.workspace.current_dir' | xargs basename); printf '\\033[2m[%s]\\033[0m %s' \"$model\" \"$dir\""
+  }
+}
