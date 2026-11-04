@@ -27,7 +27,8 @@ with a short "where was I" card for each one. Sessions that wait for you are lis
   (the repo `CLAUDE.md` asks for them), they decide "needs you" and "next" outright, no guessing.
   Without them the board reads the `Implemented: 🟢` status line and looks for a `?`.
 - **Painting.** Free space under the list becomes rock art on your terminal background: silhouettes in ochre brown
-  and red ochre, a teepee hut with a fire, fern trees and a red hand stencil. A 30 s story plays
+  and red ochre, a teepee hut with a fire, fern trees, a sun glyph and a red hand stencil. A deer
+  herd grazes on the upper wall and bolts when the mammoth trumpets. A 30 s story plays
   on it: a mammoth and her baby walk in, the hunters throw, the mammoth chases them back into
   the hut and stops at the fire, walks home, and the hunters dance round the fire and sing a wacky anthem
   over their heads. 4 pictures a second; herdr is still asked every 3 s.

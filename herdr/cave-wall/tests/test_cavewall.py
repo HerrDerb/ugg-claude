@@ -646,6 +646,28 @@ class CaveHunt(unittest.TestCase):
         f = art.frame(14, 120, art.STORY - 1)
         self.assertIn(c["anthem"], f[y])
 
+    def test_sun_glyph(self):
+        from cavewall import art
+        f, cells = art.frame(14, 120, 0), art.scene(14, 120, 0)
+        y = next(i for i, ln in enumerate(f) if "(#)" in ln)
+        self.assertLess(y, 4)                                   # high on the wall
+        self.assertEqual(cells[y][f[y].index("(#)") + 1][1], "red_fill")
+
+    def test_deer_herd_grazes_then_bolts_at_the_trumpet(self):
+        lead = lambda t: self.at(t)["herd"][0][0]
+        self.assertEqual(len(self.at(20)["herd"]), 3)
+        self.assertGreater(lead(30), lead(20))                    # wanders right
+        self.assertGreater(lead(58) - lead(54), lead(30) - lead(26))  # bolts after PRRAAAH
+        self.assertEqual(self.at(90)["herd"], [])                 # gone off the wall
+
+    def test_deer_drawn_with_antlers(self):
+        from cavewall import art
+        self.assertIn("\\Y/", "\n".join(art.frame(14, 120, 30)))
+
+    def test_no_herd_or_sun_when_space_is_tight(self):
+        from cavewall import art
+        self.assertEqual(art.cast(6, 70, 30)["herd"], [])
+
     def test_no_background_colour(self):
         from cavewall import art
         for name, (fg, bg, fg8, bg8) in art.PALETTE.items():

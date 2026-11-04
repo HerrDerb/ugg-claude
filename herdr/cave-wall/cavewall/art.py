@@ -2,7 +2,7 @@
 
 Caveman painting style, after real rock art, on the terminal's own background: figures are
 silhouettes in two pigments (dark brown and red ochre). `#` in a sprite is a solid filled cell,
-other characters are thin painted lines. Props: a hide hut, a fire, fern trees, a hand stencil.
+other characters are thin painted lines. Props: a hide hut, a fire, fern trees, a sun glyph, a hand stencil, a deer herd.
 
 One ~30 s story (STORY ticks at FRAME_MS):
 
@@ -76,6 +76,10 @@ HUT = _spr([r"    \  /", r"     \/", r"    /##\ ", r"   /####\ ", r"  /##/\##\ "
 FIRE = [_spr([r"  )", r" (#)", r" \=/"], "red"), _spr([r" (", r"  #)(", r" \=/"], "red"),
         _spr([r"   (", r" )#", r" \=/"], "red")]
 FERN = _spr([r"\|/", r"\|/", r"\|/", r" |"])
+SUN = [_spr([r" \ | /", r"--(#)--", r" / | \ "], "red"),
+       _spr([r"  \|/", r"-=(#)=-", r"  /|\ "], "red")]
+DEER = [_spr([r"        \Y/", r"         #>", r" _#######/", r"/ |\    |\ ", r"  | \   | \ "]),
+        _spr([r"        \Y/", r"         #>", r" _#######/", r"/  /|  /|", r"  /  | / |"])]
 HAND = _spr([
     r"      ##",
     r"   ## ## ##",
@@ -188,6 +192,19 @@ def cast(rows, cols, tick):
     elif 46 <= t < 86:
         spear = ("stuck", sx1)
     out.update(hunters=hunters, spear=spear)
+
+    # deer herd on the upper wall: wanders in, bolts at the trumpet, gone
+    herd = []
+    if s["big"] and s["h"] >= 12:
+        if t < 48:
+            lead = _lerp(t, 0, 48, -8, round(w * 0.40))
+        else:
+            lead = _lerp(t, 48, 72, round(w * 0.40), w + 40)
+        for k, (dx, dy) in enumerate(((0, 0), (-13, 1), (-26, 0))):
+            x = lead + dx
+            if -12 < x < w and t < 72:
+                herd.append((x, dy, (t // (1 if t >= 48 else 2) + k) % 2))
+    out["herd"] = herd
     out["anthem"], out["anthem_at"] = "", None
     if t >= 104:  # sung over the dancers' heads, clear of the hut
         song = ANTHEMS[(tick // STORY) % len(ANTHEMS)]
@@ -236,6 +253,8 @@ def scene(rows, cols, tick):
         (MAMMOTH, TRUMPET, BABY, WALK, PANIC, DANCE, HUT, FIRE) if big else
         (S_MAMMOTH, S_TRUMPET, S_BABY, S_WALK, S_PANIC, S_PANIC, S_HUT, S_FIRE))
 
+    for x, dy, k in c["herd"]:             # behind the sun and the hand
+        wall.sprite(DEER[k], x, foot - 7 + dy)
     if big and h >= HAND["h"] + 2 and w >= 100:   # an old hand stencil, sprayed red
         hx, hy = w - HAND["w"] - 5, HAND["h"]
         for k in range(14):
@@ -245,6 +264,8 @@ def scene(rows, cols, tick):
     if big:
         for fx in (round(w * 0.30), round(w * 0.66)):
             wall.sprite(FERN, fx, foot)
+        wall.sprite(SUN[(c["t"] // 4) % 2], round(w * 0.22), SUN[0]["h"] - 1)
+
 
     wall.sprite(fire[c["t"] % len(fire)], c["fire_x"], foot)
     poses = {"walk": walk, "panic": panic, "dance": dance, "throw": [THROW] if big else walk}
