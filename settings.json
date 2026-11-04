@@ -31,10 +31,6 @@
       "Tasting mud"
     ]
   },
-  "voice": {
-    "enabled": true,
-    "mode": "hold"
-  },
   "theme": "dark",
   "switchModelsOnFlag": true,
   "voiceEnabled": true

@@ -10,7 +10,7 @@ talk like caveman, teach like professor.
 | Rock | Job |
 | --- | --- |
 | `CLAUDE.md` | Ugg brain. Caveman voice + teaching mandate Claude must follow. |
-| `settings.json` | Claude Code settings: model, theme, status line, voice, cave spinner. |
+| `settings.json` | Claude Code settings: model, theme, status line, cave spinner. |
 | `herdr/cave-wall/` | Cave wall: herdr board of all parallel Claude sessions. See its [README](herdr/cave-wall/README.md). |
 | `README.md` | This rock. You read now. |
 
@@ -44,7 +44,6 @@ Rule two do the heavy lift. Voice just make it fun.
 - `model: opus` — Opus.
 - `theme: dark` — cave dark.
 - `spinnerVerbs` — spinner say "Smashing rock", "Tasting mud" and friends.
-- `voice` — hold key, talk to Ugg.
 - No `hooks` in template: they carry machine paths. `herdr integration install claude` and
   cave wall's `install.py` add their own.
 - `statusLine` — bash one-liner. Read JSON on stdin, `jq` out model name and current
