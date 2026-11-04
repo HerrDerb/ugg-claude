@@ -41,7 +41,7 @@ Rule two do the heavy lift. Voice just make it fun.
 }
 ```
 
-- `model: opus` — Opus. `modelSettings` give Fable high effort.
+- `model: opus` — Opus.
 - `theme: dark` — cave dark.
 - `spinnerVerbs` — spinner say "Smashing rock", "Tasting mud" and friends.
 - `voice` — hold key, talk to Ugg.
