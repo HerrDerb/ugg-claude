@@ -13,7 +13,7 @@ import unicodedata
 from cavewall import art, board, cards, compat, hook, plugin, worktree
 
 ICON = {"needs_you": "!", "done": "✓", "working": "~", "idle": "·", "blocked": "!", "unknown": "?"}
-FRAME_MS, RELOAD_S = 125, 3  # 8 pictures a second; herdr is asked every 3 s
+FRAME_MS, RELOAD_S = art.FRAME_MS, 3  # the painting sets the pace; herdr is asked every 3 s
 HELP = " ↑↓/jk move  ⏎ jump  n new worktree  s seed card  d done  ⌂ = base checkout  r refresh  q quit "
 
 
@@ -258,8 +258,8 @@ def _pigments():
             attrs[name] = curses.color_pair(n)
         except curses.error:
             attrs[name] = 0
-        if name in ("sun", "fire", "lava"):
-            attrs[name] |= curses.A_BOLD
+        attrs[name + "_dim"] = attrs[name] | curses.A_DIM  # outside the torchlight
+    attrs["rock"] |= curses.A_DIM
     return attrs
 
 
