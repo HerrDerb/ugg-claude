@@ -632,6 +632,24 @@ class CaveHunt(unittest.TestCase):
         self.assertEqual(colors, {"wall", "brown", "brown_fill", "red", "red_fill"})
         self.assertEqual(set(art.PALETTE), colors)
 
+    def test_anthem_sung_above_the_dancers(self):
+        from cavewall import art
+        c = self.at(art.STORY - 1)
+        y, x = c["anthem_at"]
+        xs = [h[0] for h in c["hunters"]]
+        self.assertEqual(y, c["foot"] - 4)                      # just over their heads
+        self.assertLessEqual(x, min(xs) + 3)                    # starts over the dancers ...
+        self.assertGreaterEqual(x + len(c["anthem"]), max(xs))  # ... and spans them
+        f = art.frame(14, 120, art.STORY - 1)
+        self.assertIn(c["anthem"], f[y])
+
+    def test_no_background_colour(self):
+        from cavewall import art
+        for name, (fg, bg, fg8, bg8) in art.PALETTE.items():
+            if not name.endswith("_fill"):
+                self.assertIsNone(bg, name)       # the terminal's own background shows
+                self.assertIsNone(bg8, name)
+
     def test_hut_fire_and_hand_stencil(self):
         from cavewall import art
         text = "\n".join(art.frame(14, 120, 0))

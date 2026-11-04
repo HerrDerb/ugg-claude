@@ -255,9 +255,10 @@ def _pigments():
     for n, (name, (fg, bg, fg8, bg8)) in enumerate(art.PALETTE.items(), 20):
         try:
             if many:
-                curses.init_pair(n, fg, bg)
+                curses.init_pair(n, -1 if fg is None else fg, -1 if bg is None else bg)
             else:
-                curses.init_pair(n, getattr(curses, "COLOR_" + fg8.upper()), getattr(curses, "COLOR_" + bg8.upper()))
+                c8 = lambda c: -1 if c is None else getattr(curses, "COLOR_" + c.upper())
+                curses.init_pair(n, c8(fg8), c8(bg8))
             attrs[name] = curses.color_pair(n)
         except curses.error:
             attrs[name] = 0
