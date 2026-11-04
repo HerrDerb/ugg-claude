@@ -1,6 +1,6 @@
 """A cave painting for the empty space under the session list.
 
-Caveman painting style: bare rock lit by a flickering torch, few pigments (red ochre, charcoal,
+Caveman painting style: a clean wall, few pigments (red ochre, charcoal,
 chalk), stick hunters, a mammoth outline with ochre fur, handprints. One ~30 s story:
 
   walk in   mammoth and baby walk onto the wall, hunters creep in from the left
@@ -13,9 +13,8 @@ chalk), stick hunters, a mammoth outline with ochre fur, handprints. One ~30 s s
 FRAME_MS = 250  # 4 pictures a second
 STORY = 120     # ticks: 30 s
 
-# name: (xterm-256 colour, basic 8-colour fallback). "<name>_dim" = outside the torchlight.
-PALETTE = {"rock": (238, "white"), "lit": (137, "yellow"), "redochre": (131, "red"),
-           "charcoal": (244, "white"), "chalk": (223, "white")}
+# name: (xterm-256 colour, basic 8-colour fallback)
+PALETTE = {"redochre": (131, "red"), "charcoal": (246, "white"), "chalk": (223, "white")}
 
 ANTHEMS = ["UGG UGG HOO!", "MAMMOTH BIG, UGG FAST!", "OOGA CHAKA OOGA!", "FIRE GOOD! HOO HOO!",
            "UGG RUN, UGG LIVE!"]
@@ -35,41 +34,40 @@ def _mirror(sp):
 
 MAMMOTH = [
     _spr([r"        .-~~~~~~~~~-.",
-          r"     .-'  ,  ,  ,  ,  '-.",
-          r"    / (o  ,  ,  ,  ,  ,  \ ",
-          r"   ( (    ,  ,  ,  ,  ,   |",
+          r"     .-'   ~~~~~~~~~   '-.",
+          r"    / (o   ~~~~~~~~~~~    \ ",
+          r"   ( (      ~~~~~~~~~      |",
           r"    \ \  .--.______.--.  /",
-          r"     ) ) |  |      |  | |"], "charcoal", ","),
+          r"     ) ) |  |      |  | |"], "charcoal", "~"),
     _spr([r"        .-~~~~~~~~~-.",
-          r"     .-'  ,  ,  ,  ,  '-.",
-          r"    / (o  ,  ,  ,  ,  ,  \ ",
-          r"   ( (    ,  ,  ,  ,  ,   |",
+          r"     .-'   ~~~~~~~~~   '-.",
+          r"    / (o   ~~~~~~~~~~~    \ ",
+          r"   ( (      ~~~~~~~~~      |",
           r"    \ \  .--.______.--.  /",
-          r"     ) ) /  /      \  \ \ "], "charcoal", ","),
+          r"     ) ) /  /      \  \ \ "], "charcoal", "~"),
 ]
 TRUMPET = _spr([r"  \\    .-~~~~~~~~~-.",
-                r"   \\.-'  ,  ,  ,  ,  '-.",
-                r"    \ (o  ,  ,  ,  ,  ,  \ ",
-                r"     \_   ,  ,  ,  ,  ,   |",
+                r"   \\.-'   ~~~~~~~~~   '-.",
+                r"    \ (o   ~~~~~~~~~~~    \ ",
+                r"     \_      ~~~~~~~~~      |",
                 r"       \_.--.______.--.  /",
-                r"         |  |      |  | |"], "charcoal", ",")
-BABY = [_spr([r"  .-~~~~-.", r" ( o , ,  )", r" ( (,|  |'"], "charcoal", ","),
-        _spr([r"  .-~~~~-.", r" ( o , ,  )", r" ( (/  \ '"], "charcoal", ",")]
-WALK = [_spr([r" o  /", r"/|\/", r"/ \ "], "redochre"), _spr([r" o  /", r"/|\/", r" |\ "], "redochre")]
-CREEP = [_spr(["", r",_o /", r" /\/"], "redochre"), _spr(["", r",_o /", r"  |/\ "], "redochre")]
-THROW = _spr([r" o__", r"/|", r"/ \ "], "redochre")
-PANIC = [_spr([r"\o/", r" |", r"/ \ "], "redochre"), _spr([r"\o/", r" |", r" |\ "], "redochre")]
-DANCE = [_spr([r"\o/", r" |", r"/ \ "], "redochre"), _spr([r"_o_", r" |", r"| |"], "redochre"),
-         _spr([r" o/", r"/|", r"/ >"], "redochre"), _spr([r"\o", r" |\ ", r"< \ "], "redochre")]
+                r"         |  |      |  | |"], "charcoal", "~")
+BABY = [_spr([r"  .-~~~~-.", r" ( o ~~~~ )", r" ( (  |  |'"], "charcoal", "~"),
+        _spr([r"  .-~~~~-.", r" ( o ~~~~ )", r" ( (/  \ '"], "charcoal", "~")]
+WALK = [_spr([r" o", r"/|\ ", r"/ \ "], "redochre"), _spr([r" o", r"/|\ ", r" |"], "redochre")]
+THROW = _spr([r" o_", r"/|", r"/ \ "], "redochre")
+PANIC = [_spr([r"\o/", r" |", r"/ \ "], "redochre"), _spr([r"\o/", r" |", r" |"], "redochre")]
+DANCE = [_spr([r"\o/", r" |", r"/ \ "], "redochre"), _spr([r"_o_", r" |", r"/ \ "], "redochre"),
+         _spr([r"\o_", r" |", r"/ \ "], "redochre"), _spr([r"_o/", r" |", r"/ \ "], "redochre")]
 HAND = _spr([r"  ||||", r" \    /", r"  '--'"], "redochre")
 HAND_CHALK = _spr([r" ||||", r" \    /", r"  '--'"], "chalk")
 
-S_MAMMOTH = [_spr([r"(o,,,,,,)", r" ) || ||"], "charcoal", ","),
-             _spr([r"(o,,,,,,)", r" ) /\ /\ "], "charcoal", ",")]
-S_TRUMPET = _spr([r"\(o,,,,,,)", r"   || ||"], "charcoal", ",")
-S_BABY = [_spr([r"( ,,,)", r" | |"], "charcoal", ","), _spr([r"( ,,,)", r" /\ "], "charcoal", ",")]
-S_WALK = [_spr([r"o/", r"/|"], "redochre"), _spr([r"o/", r"|\ "], "redochre")]
-S_PANIC = [_spr([r"\o/", r"/ \ "], "redochre"), _spr([r"\o/", r" |\ "], "redochre")]
+S_MAMMOTH = [_spr([r"(o~~~~~~)", r" ) || ||"], "charcoal", "~"),
+             _spr([r"(o~~~~~~)", r" ) /\ /\ "], "charcoal", "~")]
+S_TRUMPET = _spr([r"\(o~~~~~~)", r"   || ||"], "charcoal", "~")
+S_BABY = [_spr([r"( ~~~)", r" | |"], "charcoal", "~"), _spr([r"( ~~~)", r" /\ "], "charcoal", "~")]
+S_WALK = [_spr([r" o", r"/ \ "], "redochre"), _spr([r" o", r" |"], "redochre")]
+S_PANIC = [_spr([r"\o/", r"/ \ "], "redochre"), _spr([r"\o/", r" |"], "redochre")]
 S_HAND = _spr([r"|||", r"'-'"], "redochre")
 
 
@@ -92,32 +90,21 @@ def _lerp(t, t0, t1, a, b):
 
 
 class _Wall:
-    """Rock texture plus the torch: pigment outside the light is dimmed."""
+    """A clean wall: only what is painted on it shows."""
 
-    def __init__(self, h, w, t):
+    def __init__(self, h, w):
         self.h, self.w = h, w
-        self.cx, self.cy = w * 0.42, h * 0.45
-        self.r = max(h * 1.1, w * 0.28) + (_hash(t % STORY, 1) % 5) - 2   # flicker
         self.ch = [[" "] * w for _ in range(h)]
         self.co = [[None] * w for _ in range(h)]
-        for y in range(h):
-            for x in range(w):
-                hv = _hash(x, y, 3)
-                if hv % 13 == 0:
-                    self.ch[y][x] = "..''`,:"[(hv >> 4) % 7]
-                    self.co[y][x] = "lit" if self.lit(y, x) else "rock"
-
-    def lit(self, y, x):
-        return ((x - self.cx) / 2.2) ** 2 + (y - self.cy) ** 2 <= (self.r / 2.2) ** 2
 
     def put(self, y, x, text, color, opaque=False):
         for j, c in enumerate(text):
             if (c != " " or opaque) and 0 <= y < self.h and 0 <= x + j < self.w:
                 self.ch[y][x + j] = c
-                self.co[y][x + j] = None if c == " " else (color if self.lit(y, x + j) else color + "_dim")
+                self.co[y][x + j] = None if c == " " else color
 
     def sprite(self, sp, x, bottom):
-        """Bottom aligned; solid between the first and last mark of each line (hides rock)."""
+        """Bottom aligned; solid between the first and last mark of each line."""
         top = bottom - sp["h"] + 1
         for i, ln in enumerate(sp["lines"]):
             core = ln.strip(" ")
@@ -137,13 +124,12 @@ def scene(rows, cols, tick):
     h = min(rows - 1, 14)
     big = h >= 8 and cols >= 80
     w = cols
-    wall = _Wall(h, w, tick)
+    wall = _Wall(h, w)
     foot = h - 1
 
     mam, trumpet, baby, walk, panic, hand = (
         (MAMMOTH, TRUMPET, BABY, WALK, PANIC, HAND) if big else
         (S_MAMMOTH, S_TRUMPET, S_BABY, S_WALK, S_PANIC, S_HAND))
-    creep = CREEP if big else S_WALK
     dance = DANCE if big else S_PANIC
     mw, bw = mam[0]["w"], baby[0]["w"]
 
@@ -190,10 +176,14 @@ def scene(rows, cols, tick):
         if t < 16:
             continue
         if t < 40:
-            x, sp = _lerp(t, 16 + i * 3, 40, -6 - i * 5, target[i]), creep[(t // 2 + i) % 2]
+            x, sp = _lerp(t, 16 + i * 3, 40, -6 - i * 5, target[i]), walk[(t // 2 + i) % 2]
+            if i == 0:
+                wall.put(foot - (1 if big else 0), x + 3, "--->" if big else "->", "charcoal")  # spear in hand
         elif t < 48:
             x = target[i]
             sp = THROW if big and i == 0 and t < 43 else walk[0]
+            if i == 0 and t < 40:
+                wall.put(foot - 1, x + 3, "--->", "charcoal")
         elif t < 56:
             x, sp = target[i], _mirror(panic[t % 2])
         elif t < 74:
@@ -212,9 +202,10 @@ def scene(rows, cols, tick):
     if 40 <= t < 46:
         x = _lerp(t, 40, 46, sx0, sx1)
         wall.put(foot - 2 - [0, 2, 3, 3, 2, 1][t - 40], x, "--->" if big else "->", "charcoal")
-    elif t >= 46:
-        wall.put(foot - 1, sx1, "/", "charcoal")
-        wall.put(foot, sx1 - 1, "/", "charcoal")
+    elif 46 <= t < 86:  # stuck in the ground, behind whoever runs past
+        for y, x in ((foot - 1, sx1), (foot, sx1 - 1)):
+            if 0 <= x < w and wall.ch[y][x] == " ":
+                wall.put(y, x, "/", "charcoal")
 
     # --- the anthem, scratched letter by letter ----------------------------------------
     if t >= 104:

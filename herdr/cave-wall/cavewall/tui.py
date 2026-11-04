@@ -258,8 +258,6 @@ def _pigments():
             attrs[name] = curses.color_pair(n)
         except curses.error:
             attrs[name] = 0
-        attrs[name + "_dim"] = attrs[name] | curses.A_DIM  # outside the torchlight
-    attrs["rock"] |= curses.A_DIM
     return attrs
 
 
