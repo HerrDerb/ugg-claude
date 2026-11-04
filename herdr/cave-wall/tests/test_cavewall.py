@@ -229,6 +229,15 @@ class TodoLines(unittest.TestCase):
         c = cards.settle({"needs_you": False, "reason": "", "next": ""}, t)
         self.assertTrue(c["needs_you"])
 
+    def test_colored_symbols(self):
+        t = self.tail("Open todos: 🟢 none\nOptional todos: 🟠 bump version")
+        c = cards.settle({"needs_you": True, "reason": "r", "next": "n"}, t)
+        self.assertFalse(c["needs_you"])
+        self.assertEqual(c["next"], "optional: bump version")
+        t = self.tail("Open todos: 🔴 you review PR #3\nOptional todos: 🟢 none")
+        c = cards.settle({"needs_you": False, "reason": "", "next": ""}, t)
+        self.assertEqual(c["reason"], "you review PR #3")
+
     def test_later_user_message_ignores_lines(self):
         t = self.tail("Open todos: you review PR\nOptional todos: none") + [("user", "reviewed")]
         c = cards.settle({"needs_you": False, "reason": "", "next": "n"}, t)
