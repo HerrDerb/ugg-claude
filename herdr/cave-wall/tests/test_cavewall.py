@@ -563,7 +563,7 @@ class CrossPlatform(unittest.TestCase):
 
 
 class CaveHunt(unittest.TestCase):
-    """Caveman painting style: bare rock, few pigments, torchlight. One ~30 s story: walk in,
+    """Caveman painting style: clean wall, few pigments. One ~30 s story: walk in,
     throw, the mammoth chases the hunters off the wall, turns, walks home, the hunters come back,
     dance and scratch an anthem into the rock."""
     def eye(self, t, rows=14, cols=120):
@@ -621,7 +621,7 @@ class CaveHunt(unittest.TestCase):
         from cavewall import art
         colors = {c.split("_")[0] for t in range(0, art.STORY, 3)
                   for row in art.scene(14, 120, t) for _, c in row if c}
-        self.assertLessEqual(colors - {"rock", "lit"}, {"redochre", "charcoal", "chalk"})
+        self.assertLessEqual(colors, {"redochre", "charcoal", "chalk"})
         text = "\n".join(art.frame(14, 120, 50))
         for gone in ("- O -", "__..------..__", "/______\\"):
             self.assertNotIn(gone, text)
@@ -630,10 +630,15 @@ class CaveHunt(unittest.TestCase):
         from cavewall import art
         self.assertIn("|||", "\n".join(art.frame(14, 120, 0)))
 
-    def test_torch_flickers(self):
+    def test_clean_wall_no_specks(self):
         from cavewall import art
-        lit = [sum(c == "lit" for row in art.scene(14, 120, t) for _, c in row) for t in range(8)]
-        self.assertGreater(len(set(lit)), 1)
+        marks = sum(c != " " for row in art.frame(14, 120, 0) for c in row)
+        self.assertLess(marks, 60)  # only handprints, dots and tally before the cast walks in
+
+    def test_one_brightness_per_pigment(self):
+        from cavewall import art
+        colors = {c for t in range(0, art.STORY, 3) for row in art.scene(14, 120, t) for _, c in row if c}
+        self.assertFalse([c for c in colors if c.endswith("_dim")])
 
 if __name__ == "__main__":
     unittest.main()
