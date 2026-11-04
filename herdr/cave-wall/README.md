@@ -31,7 +31,8 @@ with a short "where was I" card for each one. Sessions that wait for you are lis
   herd grazes on the upper wall and bolts when the mammoth trumpets. A 30 s story plays
   on it: a mammoth and her baby walk in, the hunters throw, the mammoth chases them back into
   the hut and stops at the fire, walks home, and the hunters dance round the fire and sing a wacky anthem
-  over their heads. 4 pictures a second; herdr is still asked every 3 s.
+  over their heads. It stands still until you press `p`, then plays once at 4 pictures a second.
+  A new board starts still. herdr is asked every 3 s either way.
 - **Empty sessions** (fresh or only `/clear`) get a 🌱 or 🧹 card without a model call.
 
 ## Keys
@@ -42,6 +43,7 @@ with a short "where was I" card for each one. Sessions that wait for you are lis
 | `Enter` | jump to the session's pane (closes the popup) |
 | `n` | new worktree of the row's repo from fresh `origin/main`, with Claude started in it. Works on a base checkout or a worktree row. Empty branch name = herdr picks one |
 | `s` | write this session's card now |
+| `p` | play the cave painting once (30 s); `p` again stops it |
 | `d` | done. Worktree: delete it and close its terminal. Base checkout: `git reset --hard` and check out the default branch (branch kept). Asks first; needs capital `Y` when something would be lost |
 | `r` / `q` | refresh / quit |
 

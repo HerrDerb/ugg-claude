@@ -14,7 +14,7 @@ from cavewall import art, board, cards, compat, hook, plugin, worktree
 
 ICON = {"needs_you": "!", "done": "✓", "working": "~", "idle": "·", "blocked": "!", "unknown": "?"}
 FRAME_MS, RELOAD_S = art.FRAME_MS, 3  # the painting sets the pace; herdr is asked every 3 s
-HELP = " ↑↓/jk move  ⏎ jump  n new worktree  s seed card  d done  ⌂ = base checkout  r refresh  q quit "
+HELP = " ↑↓/jk move  ⏎ jump  n new worktree  s seed card  d done  p play  ⌂ = base checkout  r refresh  q quit "
 
 
 def _ask(stdscr, text, attr):
@@ -279,8 +279,38 @@ def free_area(h, shown):
     return 2 + shown + 1, h - 8
 
 
-def _paint(stdscr, top, bottom, w, paint):
-    cells = art.scene(bottom - top + 1, w, int(time.monotonic() * 1000 / FRAME_MS))
+class Player:
+    """The painting stands still until 'p' plays the story once from the start; 'p' again
+    stops it. A new board starts still. Each play sings the next anthem."""
+    STILL = 30  # the still picture: hunters out, mammoth and herd on the wall
+
+    def __init__(self, clock=time.monotonic):
+        self.clock, self.start, self.plays = clock, None, 0
+
+    @property
+    def playing(self):
+        return self.start is not None
+
+    def toggle(self):
+        if self.playing:
+            self.start = None
+        else:
+            self.start, self.plays = self.clock(), self.plays + 1
+
+    def tick(self):
+        """Story tick to draw (the anthem rotates with tick // STORY)."""
+        base = max(0, self.plays - 1) * art.STORY
+        if not self.playing:
+            return base + self.STILL
+        t = int((self.clock() - self.start) * 1000 / FRAME_MS)
+        if t >= art.STORY:
+            self.start = None
+            return base + self.STILL
+        return base + t
+
+
+def _paint(stdscr, top, bottom, w, paint, tick):
+    cells = art.scene(bottom - top + 1, w, tick)
     if not cells:
         return
     y0 = bottom - len(cells) + 1
@@ -307,7 +337,7 @@ def run(stdscr, close_on_jump=False):
         curses.init_pair(i, c, -1)
     color = {"needs_you": 1, "done": 2, "working": 3, "blocked": 1}
     paint = _pigments()
-    stdscr.timeout(FRAME_MS)  # animation tick; herdr is asked only every RELOAD_S
+    player = Player()  # still until 'p'; a new board starts still
     sel, rows, err = 0, *_load()
     loaded_at = time.monotonic()
     msg = ""
@@ -332,7 +362,7 @@ def run(stdscr, close_on_jump=False):
             line = f" {ICON.get(key, '?')} {mark} {r['place'][:28]:<28} {age:>8}  {r['goal']}"
             _put(stdscr, 2 + i, 0, line.ljust(w), attr)
         free_top, free_bottom = free_area(h, min(len(rows), list_h))
-        _paint(stdscr, free_top, free_bottom, w, paint)
+        _paint(stdscr, free_top, free_bottom, w, paint, player.tick())
         if rows:
             r = rows[sel]
             y = h - 6
@@ -349,6 +379,7 @@ def run(stdscr, close_on_jump=False):
         _put(stdscr, h - 1, 0, f" {msg} " if msg else HELP, curses.A_BOLD if msg else curses.A_DIM)
         stdscr.refresh()
 
+        stdscr.timeout(FRAME_MS if player.playing else RELOAD_S * 1000)  # no redraws when still
         k = stdscr.getch()
         if k == -1 and time.monotonic() - loaded_at < RELOAD_S:
             continue  # just the next picture of the hunt
@@ -369,6 +400,9 @@ def run(stdscr, close_on_jump=False):
                 board.focus(pane)
                 if close_on_jump:
                     return
+        elif k == ord("p"):
+            player.toggle()
+            continue  # just the painting changed
         elif k == ord("s") and rows:
             msg = _seed(rows[sel])
         elif k == ord("d") and rows:
