@@ -63,12 +63,33 @@ def remove_herdr_key(text):
     return out.rstrip("\n") + "\n" if out.strip() else ""
 
 
-def add_herdr_key(text, command):
+def add_herdr_key(text, command, kind="popup"):
+    """kind 'plugin_action' (preferred) or 'popup' (fallback when the plugin cannot be linked)."""
     text = remove_herdr_key(text)
     cmd = command.replace("\\", "\\\\").replace('"', '\\"')
-    block = ('\n[[keys.command]]\nkey = "ctrl+alt+w"\ntype = "popup"\n'
-             f'command = "{cmd}"\ndescription = "{MARK}"\nwidth = "90%"\nheight = "85%"\n')
+    block = (f'\n[[keys.command]]\nkey = "ctrl+alt+w"\ntype = "{kind}"\n'
+             f'command = "{cmd}"\ndescription = "{MARK}"\n')
+    if kind == "popup":
+        block += 'width = "90%"\nheight = "85%"\n'
     return text.rstrip("\n") + "\n" + block
+
+
+PLUGIN_ID = "ugg.cavewall"
+
+
+def _herdr(args):
+    """Run a herdr CLI command, return its exit code (127 when herdr is missing)."""
+    import subprocess
+    exe = shutil.which("herdr")
+    if not exe:
+        return 127
+    return subprocess.run([exe, *args], capture_output=True, timeout=30).returncode
+
+
+def link_plugin(herdr=_herdr):
+    """Link this folder as herdr plugin (relink so a moved checkout is picked up). True on success."""
+    herdr(["plugin", "unlink", PLUGIN_ID])
+    return herdr(["plugin", "link", HERE]) == 0
 
 
 def default_herdr_config(home):
@@ -95,7 +116,7 @@ def _hook_command():
     return f'"{LAUNCHER}" hook' if " " in LAUNCHER else f"{LAUNCHER} hook"
 
 
-def install(home, herdr_config, quiet=False):
+def install(home, herdr_config, quiet=False, herdr=_herdr):
     # 1. launcher
     link = launcher_path(home)
     os.makedirs(os.path.dirname(link), exist_ok=True)
@@ -126,9 +147,14 @@ def install(home, herdr_config, quiet=False):
         with open(herdr_config, encoding="utf-8") as f:
             text = f.read()
         _backup(herdr_config, quiet)
+        if link_plugin(herdr):
+            act = "open-windows" if WINDOWS else "open"
+            new_text, how = add_herdr_key(text, f"{PLUGIN_ID}.{act}", kind="plugin_action"), "plugin"
+        else:
+            new_text, how = add_herdr_key(text, f"{LAUNCHER} popup"), "plain popup (plugin link failed)"
         with open(herdr_config, "w", encoding="utf-8") as f:
-            f.write(add_herdr_key(text, f"{LAUNCHER} popup"))
-        _say(quiet, f"  key      ctrl+alt+w in {herdr_config} (run: herdr server reload-config)")
+            f.write(new_text)
+        _say(quiet, f"  key      ctrl+alt+w ({how}) in {herdr_config} (run: herdr server reload-config)")
     else:
         _say(quiet, f"  key      skipped, herdr config not found at {herdr_config}")
 
@@ -136,7 +162,7 @@ def install(home, herdr_config, quiet=False):
         _check_deps()
 
 
-def uninstall(home, herdr_config, quiet=False):
+def uninstall(home, herdr_config, quiet=False, herdr=_herdr):
     link = launcher_path(home)
     if os.path.lexists(link):
         os.remove(link)
@@ -154,7 +180,8 @@ def uninstall(home, herdr_config, quiet=False):
         _backup(herdr_config, quiet)
         with open(herdr_config, "w", encoding="utf-8") as f:
             f.write(remove_herdr_key(text))
-    _say(quiet, "  removed launcher, hook and key. Cards stay in ~/.claude/cavewall (delete by hand).")
+    herdr(["plugin", "unlink", PLUGIN_ID])
+    _say(quiet, "  removed launcher, hook, key and plugin link. Cards stay in ~/.claude/cavewall (delete by hand).")
 
 
 def _check_deps():

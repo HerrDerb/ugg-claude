@@ -10,7 +10,7 @@ import textwrap
 import time
 import unicodedata
 
-from cavewall import art, board, cards, compat, hook, worktree
+from cavewall import art, board, cards, compat, hook, plugin, worktree
 
 ICON = {"needs_you": "!", "done": "✓", "working": "~", "idle": "·", "blocked": "!", "unknown": "?"}
 HELP = " ↑↓/jk move  ⏎ jump  n new worktree  s seed card  d done  ⌂ = base checkout  r refresh  q quit "
@@ -117,6 +117,21 @@ def _reset(stdscr, row, rows):
     return f"{row['place']} clean on {target} (old branch kept)"
 
 
+EXIT = object()  # returned by actions after which the board must quit
+_POPUP = [False]  # set by run(): popup boards get reopened by the relay
+
+
+def _home_workspace():
+    """Workspace this board lives in: a popup belongs to the workspace it was opened from."""
+    import json
+    try:
+        ctx = json.loads(os.environ.get("HERDR_PLUGIN_CONTEXT_JSON") or "{}")
+    except ValueError:
+        ctx = {}
+    return (ctx.get("workspace_id") or os.environ.get("HERDR_ACTIVE_WORKSPACE_ID")
+            or os.environ.get("HERDR_WORKSPACE_ID") or board.focused_workspace())
+
+
 def _delete(stdscr, row, rows):
     """Confirm and remove the row's worktree and close its terminal. Returns a status message."""
     if not row["is_worktree"]:
@@ -134,11 +149,15 @@ def _delete(stdscr, row, rows):
             return "cancelled"
     elif _ask(stdscr, f" {what} y/N ", curses.color_pair(3)) not in (ord("y"), ord("Y")):
         return "cancelled"
-    if board.focused_workspace() == row["workspace_id"]:
+    if row["workspace_id"] == _home_workspace():
+        # herdr closes this board together with its workspace: hand the job to a detached relay
         safe = board.refuge(rows, row)
         if not safe:
             return "it is the only workspace; closing it would close the board too. Ugg wait."
-        subprocess.run([compat.exe("herdr"), "workspace", "focus", safe], capture_output=True, timeout=5)
+        plugin.spawn_relay(row["workspace_id"], safe, bool(danger),
+                           [r["session_id"] for r in rows if r["workspace_id"] == row["workspace_id"]],
+                           reopen=_POPUP[0])
+        return EXIT
     err = worktree.remove(row["workspace_id"], force=bool(danger))
     if err:
         return f"failed: {err}"
@@ -230,6 +249,7 @@ def _put(win, y, x, text, attr=0):
 
 
 def run(stdscr, close_on_jump=False):
+    _POPUP[0] = close_on_jump
     for setup in (lambda: curses.curs_set(0), curses.use_default_colors):
         try:
             setup()  # not every terminal (e.g. some Windows consoles) supports these
@@ -305,6 +325,8 @@ def run(stdscr, close_on_jump=False):
             msg = _seed(rows[sel])
         elif k == ord("d") and rows:
             msg = _delete(stdscr, rows[sel], rows)
+            if msg is EXIT:
+                return
         rows, err = _load()
 
 

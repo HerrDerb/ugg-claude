@@ -47,6 +47,18 @@ class HerdrKey(unittest.TestCase):
         self.assertIn('command = "/opt/cw popup"', t)
         self.assertIn('key = "ctrl+alt+w"', t)
 
+    def test_plugin_action_block(self):
+        t = install.add_herdr_key("", "ugg.cavewall.open", kind="plugin_action")
+        self.assertIn('type = "plugin_action"', t)
+        self.assertIn('command = "ugg.cavewall.open"', t)
+        self.assertNotIn("width", t)
+
+    def test_plugin_block_replaces_old_popup_block(self):
+        t = install.add_herdr_key(install.add_herdr_key("", "/old/cavewall.sh popup"),
+                                  "ugg.cavewall.open", kind="plugin_action")
+        self.assertEqual(t.count("[[keys.command]]"), 1)
+        self.assertNotIn("/old/cavewall", t)
+
     def test_replaces_old_cavewall_block_keeps_others(self):
         old = ('[[keys.command]]\nkey = "prefix+alt+g"\ntype = "popup"\ncommand = "lazygit"\n\n'
                '[[keys.command]]\nkey = "prefix+a"\ntype = "popup"\ncommand = "/old/cavewall popup"\n'
@@ -73,18 +85,26 @@ class InstallEndToEnd(unittest.TestCase):
             os.makedirs(os.path.dirname(herdr_cfg))
             with open(herdr_cfg, "w") as f:
                 f.write('theme = "x"\n')
+            calls = []
+
+            def fake(args):  # never touch the real herdr from tests
+                calls.append(args)
+                return 0
             for _ in range(2):
-                install.install(home=home, herdr_config=herdr_cfg, quiet=True)
+                install.install(home=home, herdr_config=herdr_cfg, quiet=True, herdr=fake)
             settings = json.load(open(os.path.join(home, ".claude", "settings.json")))
             cmds = [h["command"] for e in settings["hooks"]["Stop"] for h in e["hooks"]]
             self.assertEqual(len(cmds), 1)
             self.assertTrue(os.path.exists(install.launcher_path(home)))
             self.assertEqual(open(herdr_cfg).read().count("cave wall"), 1)
-            install.uninstall(home=home, herdr_config=herdr_cfg, quiet=True)
+            self.assertIn('type = "plugin_action"', open(herdr_cfg).read())
+            self.assertIn(["plugin", "link", install.HERE], calls)
+            install.uninstall(home=home, herdr_config=herdr_cfg, quiet=True, herdr=fake)
             settings = json.load(open(os.path.join(home, ".claude", "settings.json")))
             self.assertEqual(settings["hooks"].get("Stop", []), [])
             self.assertNotIn("cave wall", open(herdr_cfg).read())
             self.assertFalse(os.path.lexists(install.launcher_path(home)))
+            self.assertEqual(calls[-1], ["plugin", "unlink", install.PLUGIN_ID])
 
 
 if __name__ == "__main__":

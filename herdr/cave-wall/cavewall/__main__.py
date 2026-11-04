@@ -1,8 +1,8 @@
-"""cavewall [board|popup|seed|hook]   (popup: Enter jumps and closes, for a herdr popup key)"""
+"""cavewall [board|popup|open|seed|hook]   (popup: Enter jumps and closes; open: board as herdr plugin popup)"""
 import sys
 from concurrent.futures import ThreadPoolExecutor
 
-from cavewall import board, cards, hook, tui
+from cavewall import board, cards, hook, plugin, tui
 
 
 def seed():
@@ -27,6 +27,10 @@ def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else "board"
     if cmd == "refresh":
         return hook.refresh(*sys.argv[2:5])
+    if cmd == "relay":
+        return plugin.relay_main(sys.argv[2:])
+    if cmd == "open":
+        return plugin.open_board()
     {"board": tui.main, "popup": lambda: tui.main(close_on_jump=True), "seed": seed, "hook": hook.main}.get(cmd, lambda: print(__doc__))()
 
 

@@ -52,7 +52,8 @@ The installer is safe to run again and writes `.bak-cavewall` backups first. It 
 
 1. a `cavewall` launcher in `~/.local/bin`
 2. the `Stop` hook in `~/.claude/settings.json`
-3. the `ctrl+alt+w` popup key in herdr's `config.toml`
+3. links this folder as herdr plugin `ugg.cavewall` (`herdr-plugin.toml`) and binds `ctrl+alt+w`
+   to its `open` action. Falls back to a plain popup key if the link fails.
 
 On Windows also run `py -m pip install windows-curses`.
 
@@ -66,6 +67,10 @@ Already running Claude sessions do not load new hooks; the board repaints their 
 - **Privacy:** cards are plain JSON in `~/.claude/cavewall/` and can contain project context.
   The transcript tail goes to Anthropic, as in normal Claude use.
 - **`d` is destructive** by design. Read the prompt before you press `Y`.
+- **Deleting the board's own workspace:** herdr closes every pane of a closed workspace, the
+  board popup included, and plugin popups can only open on the active pane. So a detached relay
+  focuses a safe workspace (the repo's base checkout if open), removes the worktree, cleans the
+  cards and opens the board again there.
 - Settings: `CAVEWALL_MODEL` (default `haiku`), `CAVEWALL_DIR` (default `~/.claude/cavewall`).
 
 ## Develop
