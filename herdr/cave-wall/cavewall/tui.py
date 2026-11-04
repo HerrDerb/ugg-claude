@@ -259,15 +259,23 @@ def _put(win, y, x, text, attr=0):
 
 
 def _pigments():
-    """Curses attributes for the painting's natural colours (256 colours, else the basic 8)."""
+    """Curses attributes for the painting: (fg, bg) pairs, 256 colours or the basic 8."""
     attrs, many = {}, getattr(curses, "COLORS", 8) >= 256
-    for n, (name, (c256, c8)) in enumerate(art.PALETTE.items(), 20):
+    for n, (name, (fg, bg, fg8, bg8)) in enumerate(art.PALETTE.items(), 20):
         try:
-            curses.init_pair(n, c256 if many else getattr(curses, "COLOR_" + c8.upper()), -1)
+            if many:
+                curses.init_pair(n, fg, bg)
+            else:
+                curses.init_pair(n, getattr(curses, "COLOR_" + fg8.upper()), getattr(curses, "COLOR_" + bg8.upper()))
             attrs[name] = curses.color_pair(n)
         except curses.error:
             attrs[name] = 0
     return attrs
+
+
+def free_area(h, shown):
+    """Rows between the session list and the separator line (h - 7) over the details."""
+    return 2 + shown + 1, h - 8
 
 
 def _paint(stdscr, top, bottom, w, paint):
@@ -283,8 +291,7 @@ def _paint(stdscr, top, bottom, w, paint):
             while end < len(row) and row[end][1] == col:
                 end += 1
             text = "".join(c for c, _ in row[x:end])
-            if text.strip():
-                _put(stdscr, y0 + i, x, text, paint.get(col, curses.A_DIM))
+            _put(stdscr, y0 + i, x, text, paint.get(col, 0))  # blanks too: they are the rock
             x = end
 
 
@@ -323,7 +330,7 @@ def run(stdscr, close_on_jump=False):
             mark = "⌂" if r["kind"] == "base" else " "
             line = f" {ICON.get(key, '?')} {mark} {r['place'][:28]:<28} {age:>8}  {r['goal']}"
             _put(stdscr, 2 + i, 0, line.ljust(w), attr)
-        free_top, free_bottom = 2 + min(len(rows), list_h) + 1, h - 7
+        free_top, free_bottom = free_area(h, min(len(rows), list_h))
         _paint(stdscr, free_top, free_bottom, w, paint)
         if rows:
             r = rows[sel]
