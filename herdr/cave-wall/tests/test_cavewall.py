@@ -562,50 +562,26 @@ class CrossPlatform(unittest.TestCase):
             self.assertNotIn("os.fork", f.read_text(encoding="utf-8"), f.name)
 
 
-class CavePainting(unittest.TestCase):
-    def test_big_painting_when_lots_of_room(self):
-        from cavewall import art
-        self.assertIs(art.pick(rows=20, cols=120), art.BIG)
-
-    def test_small_painting_when_little_room(self):
-        from cavewall import art
-        self.assertIs(art.pick(rows=len(art.SMALL) + 1, cols=60), art.SMALL)
-
-    def test_nothing_when_no_room(self):
-        from cavewall import art
-        self.assertIsNone(art.pick(rows=1, cols=120))
-        self.assertIsNone(art.pick(rows=20, cols=10))
-
-    def test_painting_fits_what_it_claims(self):
-        from cavewall import art
-        for rows, cols in ((5, 40), (9, 70), (30, 200)):
-            p = art.pick(rows, cols)
-            if p:
-                self.assertLess(len(p), rows)
-                self.assertLess(max(map(len, p)), cols)
-
-
-
 class CaveHunt(unittest.TestCase):
-    """The painting is one ~30 s story: walk in, sneak, throw, the mammoth chases the hunters
-    back into their cave, leaves, night falls and the cave sings."""
-    def eye(self, t, rows=24, cols=150):
+    """Caveman painting style: bare rock, few pigments, torchlight. One ~30 s story: walk in,
+    throw, the mammoth chases the hunters off the wall, turns, walks home, the hunters come back,
+    dance and scratch an anthem into the rock."""
+    def eye(self, t, rows=14, cols=120):
         from cavewall import art
-        return next(ln.index(e) for ln in art.frame(rows, cols, t) for e in ("(o)", "(O)") if e in ln)
+        return next(ln.index(e) for ln in art.frame(rows, cols, t) for e in ("(o", "o)") if e in ln)
 
-    def hunters(self, t, rows=24, cols=150):
+    def hunters(self, t, rows=14, cols=120):
         from cavewall import art
         return [i for ln in art.frame(rows, cols, t) for i in range(len(ln)) if ln.startswith("\\o/", i)]
 
-    def test_frames_fit_and_have_ground(self):
+    def test_frames_fit(self):
         from cavewall import art
         for rows, cols in ((5, 40), (9, 70), (16, 100), (30, 200)):
-            for tick in range(0, art.STORY, 7):
+            for tick in range(0, art.STORY, 5):
                 f = art.frame(rows, cols, tick)
                 self.assertIsNotNone(f)
                 self.assertLess(len(f), rows)
                 self.assertTrue(all(len(line) <= cols for line in f))
-                self.assertIn("~", f[-1])
 
     def test_nothing_when_no_room(self):
         from cavewall import art
@@ -614,54 +590,50 @@ class CaveHunt(unittest.TestCase):
 
     def test_story_is_20_to_30_seconds_and_loops(self):
         from cavewall import art
-        self.assertTrue(20 <= art.STORY * 125 / 1000 <= 30)
-        self.assertEqual(art.frame(24, 150, 77), art.frame(24, 150, 77 + art.STORY))
+        self.assertTrue(20 <= art.STORY * art.FRAME_MS / 1000 <= 30)
+        self.assertEqual(art.scene(14, 120, 37), art.scene(14, 120, 37 + art.STORY))
 
     def test_not_just_two_frames(self):
         from cavewall import art
-        pictures = {tuple(art.frame(24, 150, t)) for t in range(art.STORY)}
-        self.assertGreater(len(pictures), 100)
+        self.assertGreater(len({tuple(art.frame(14, 120, t)) for t in range(art.STORY)}), 60)
 
     def test_mammoth_walks_in_from_the_right(self):
-        self.assertLess(self.eye(40), self.eye(20))
+        self.assertLess(self.eye(20), self.eye(6))
 
-    def test_mammoth_chases_hunters_back_to_the_cave(self):
-        self.assertLess(self.eye(150), self.eye(125) - 20)       # charges left
-        early, late = self.hunters(124), self.hunters(140)
+    def test_mammoth_chases_hunters_back(self):
+        self.assertLess(self.eye(78), self.eye(62) - 20)
+        early, late = self.hunters(62), self.hunters(70)
         self.assertTrue(early and late)
-        self.assertLess(max(late), max(early))                   # hunters flee left
-        self.assertTrue(all(x < self.eye(140) for x in late))    # and run in front of it
+        self.assertLess(max(late), max(early))
+        self.assertTrue(all(x < self.eye(70) for x in late))
 
     def test_mammoth_turns_and_goes_home(self):
-        self.assertGreater(self.eye(200), self.eye(180))
+        self.assertGreater(self.eye(96), self.eye(86))
 
-    def test_trumpet_and_wacky_anthem(self):
+    def test_anthem_scratched_into_the_wall(self):
         from cavewall import art
-        self.assertIn("PRRAAAH!", "\n".join(art.frame(24, 150, 114)))
-        night = "\n".join(art.frame(24, 150, 230))
-        self.assertTrue(any(a in night for a in art.ANTHEMS))
+        end = "\n".join(art.frame(14, 120, art.STORY - 1))
+        self.assertTrue(any(a in end for a in art.ANTHEMS))
+        half = "\n".join(art.frame(14, 120, art.STORY - 8))
+        self.assertFalse(any(a in half for a in art.ANTHEMS))  # letter by letter
 
-    def test_tall_space_gets_whole_scenery(self):
+    def test_cave_style_few_pigments_no_scenery(self):
         from cavewall import art
-        tall = art.frame(30, 160, 30)
-        self.assertGreater(len(tall), len(art.frame(9, 160, 30)))
-        text = "\n".join(tall)
-        for thing in ("/\\", "||", "__..------..__"):  # mountains, trees, cave
-            self.assertIn(thing, text)
+        colors = {c.split("_")[0] for t in range(0, art.STORY, 3)
+                  for row in art.scene(14, 120, t) for _, c in row if c}
+        self.assertLessEqual(colors - {"rock", "lit"}, {"redochre", "charcoal", "chalk"})
+        text = "\n".join(art.frame(14, 120, 50))
+        for gone in ("- O -", "__..------..__", "/______\\"):
+            self.assertNotIn(gone, text)
 
-    def test_day_and_night(self):
+    def test_handprints_on_the_wall(self):
         from cavewall import art
-        day = {c for row in art.scene(30, 160, 60) for _, c in row}
-        night = {c for row in art.scene(30, 160, 230) for _, c in row}
-        self.assertIn("sun", day)
-        self.assertNotIn("sun", night)
-        self.assertTrue({"moon", "star"} <= night)
+        self.assertIn("|||", "\n".join(art.frame(14, 120, 0)))
 
-    def test_natural_colors(self):
+    def test_torch_flickers(self):
         from cavewall import art
-        colors = {c for row in art.scene(30, 160, 60) for _, c in row} - {None}
-        self.assertTrue({"sun", "fire", "water", "plant", "ochre", "earth"} <= colors)
-        self.assertTrue(colors <= set(art.PALETTE))
+        lit = [sum(c == "lit" for row in art.scene(14, 120, t) for _, c in row) for t in range(8)]
+        self.assertGreater(len(set(lit)), 1)
 
 if __name__ == "__main__":
     unittest.main()
