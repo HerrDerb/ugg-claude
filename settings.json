@@ -32,6 +32,5 @@
     ]
   },
   "theme": "dark",
-  "switchModelsOnFlag": true,
-  "voiceEnabled": true
+  "switchModelsOnFlag": true
 }
