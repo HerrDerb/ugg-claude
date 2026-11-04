@@ -87,7 +87,7 @@ def _todo(rx, text):
     m = rx.search(text)
     if not m:
         return None
-    v = m.group(1).strip(" .*`")
+    v = m.group(1).strip(" .*`🟢🟠🔴")
     return "" if v.lower() in ("none", "-", "nothing") else v
 
 

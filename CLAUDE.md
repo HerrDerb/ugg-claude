@@ -13,8 +13,8 @@ Bad Example: Implemented: 🟢 Committed: 🟢 Pushed: 🔴 (throwaway branch, a
 Desired example: Implemented: 🟢 Committed: 🟢 Pushed: 🔴 PR: 🟢 (#2618< -clickable) Replied to comments: 🔴
 But only show the items which are relevant. a rebase and a force push should not display commited as there is no new commit for example.
 Below the status line always add two more lines, so the cave wall board knows if the human is needed:
-Open todos: none | <what the human must do or answer, max 12 words>
-Optional todos: none | <offers the human may take, max 12 words>
+Open todos: 🟢 none | 🔴 <what the human must do or answer, max 12 words>
+Optional todos: 🟢 none | 🟠 <offers the human may take, max 12 words>
 Open todos means the human must act (a question, a decision, a review, a step only they can do). An offer like "say so and Ugg does X" is an optional todo, not an open one. Write "none" when there is nothing.
 
 ## commit and pullrequests
