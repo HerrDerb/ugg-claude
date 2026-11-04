@@ -1,6 +1,6 @@
 """A cave painting for the empty space under the session list.
 
-Caveman painting style, after real rock art: the free space becomes tan rock, figures are
+Caveman painting style, after real rock art, on the terminal's own background: figures are
 silhouettes in two pigments (dark brown and red ochre). `#` in a sprite is a solid filled cell,
 other characters are thin painted lines. Props: a hide hut, a fire, fern trees, a hand stencil.
 
@@ -16,14 +16,15 @@ One ~30 s story (STORY ticks at FRAME_MS):
 FRAME_MS = 250  # 4 pictures a second
 STORY = 120     # ticks: 30 s
 
-# name: (fg xterm-256, bg xterm-256, fg basic, bg basic). The wall colour is every cell's ground.
-_TAN = 180
+# name: (fg xterm-256, bg xterm-256, fg basic, bg basic); bg None = the terminal's own background.
+# Pigments light enough for dark terminals and dark enough for light ones.
+_BROWN, _RED = 137, 131
 PALETTE = {
-    "wall": (_TAN, _TAN, "yellow", "yellow"),
-    "brown": (52, _TAN, "black", "yellow"),
-    "brown_fill": (52, 52, "black", "black"),
-    "red": (124, _TAN, "red", "yellow"),
-    "red_fill": (124, 124, "red", "red"),
+    "wall": (None, None, None, None),
+    "brown": (_BROWN, None, "yellow", None),
+    "brown_fill": (_BROWN, _BROWN, "yellow", "yellow"),
+    "red": (_RED, None, "red", None),
+    "red_fill": (_RED, _RED, "red", "red"),
 }
 
 ANTHEMS = ["UGG UGG HOO!", "MAMMOTH BIG, UGG FAST!", "OOGA CHAKA OOGA!", "FIRE GOOD! HOO HOO!",
@@ -187,11 +188,14 @@ def cast(rows, cols, tick):
     elif 46 <= t < 86:
         spear = ("stuck", sx1)
     out.update(hunters=hunters, spear=spear)
-    if t >= 104:
+    out["anthem"], out["anthem_at"] = "", None
+    if t >= 104:  # sung over the dancers' heads, clear of the hut
         song = ANTHEMS[(tick // STORY) % len(ANTHEMS)]
         out["anthem"] = song[:min(len(song), (t - 104 + 1) * len(song) // 15)]
-    else:
-        out["anthem"] = ""
+        xs = [hh[0] for hh in hunters if hh]
+        mid = (min(xs) + max(xs) + 3) // 2
+        ax = max(s["hut_x"] + s["hut_w"] + 1, mid - len(song) // 2)
+        out["anthem_at"] = (s["foot"] - (WALK if s["big"] else S_WALK)[0]["h"], min(ax, w - len(song)))
     return out
 
 
@@ -271,8 +275,8 @@ def scene(rows, cols, tick):
                 wall.put(y, x, "/", "brown")
 
     if c["anthem"]:
-        song = ANTHEMS[(tick // STORY) % len(ANTHEMS)]
-        wall.put(max(0, foot - (6 if big else 3)), max(0, round(w * 0.42) - len(song) // 2), c["anthem"], "brown")
+        y, x = c["anthem_at"]
+        wall.put(max(0, y), max(0, x), c["anthem"], "brown")
     return [list(zip(wall.ch[y], wall.co[y])) for y in range(h)]
 
 
