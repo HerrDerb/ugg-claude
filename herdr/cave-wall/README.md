@@ -26,11 +26,11 @@ with a short "where was I" card for each one. Sessions that wait for you are lis
 - **Todo lines.** If the last answer ends with `Open todos: 🟢 none | 🔴 ...` and `Optional todos: 🟢 none | 🟠 ...` lines
   (the repo `CLAUDE.md` asks for them), they decide "needs you" and "next" outright, no guessing.
   Without them the board reads the `Implemented: 🟢` status line and looks for a `?`.
-- **Painting.** Free space under the list becomes a cave wall in caveman painting style: clean
-  wall, only red ochre, charcoal and chalk, stick hunters, handprints. A 30 s story plays on
-  it: a mammoth and her baby walk in, hunters throw, the mammoth chases them off the wall, walks
-  home, and the hunters sneak back to dance and scratch a wacky anthem into the rock.
-  4 pictures a second; herdr is still asked every 3 s. Small cast when space is tight.
+- **Painting.** Free space under the list becomes rock art: tan stone, silhouettes in dark brown
+  and red ochre, a teepee hut with a fire, fern trees and a red hand stencil. A 30 s story plays
+  on it: a mammoth and her baby walk in, the hunters throw, the mammoth chases them back into
+  the hut and stops at the fire, walks home, and the hunters dance and scratch a wacky anthem
+  into the rock. 4 pictures a second; herdr is still asked every 3 s.
 - **Empty sessions** (fresh or only `/clear`) get a 🌱 or 🧹 card without a model call.
 
 ## Keys
