@@ -23,6 +23,9 @@ with a short "where was I" card for each one. Sessions that wait for you are lis
   a card (goal, state, next step, needs you) to `~/.claude/cavewall/<session>.json`.
 - **Board.** Joins `herdr agent list` with the cards by session id. It also repaints cards that
   are older than their transcript, which covers sessions started before the hook existed.
+- **Todo lines.** If the last answer ends with `Open todos: ...` and `Optional todos: ...` lines
+  (the repo `CLAUDE.md` asks for them), they decide "needs you" and "next" outright, no guessing.
+  Without them the board reads the `Implemented: 🟢` status line and looks for a `?`.
 - **Empty sessions** (fresh or only `/clear`) get a 🌱 or 🧹 card without a model call.
 
 ## Keys
