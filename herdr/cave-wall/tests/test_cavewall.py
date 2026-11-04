@@ -567,6 +567,59 @@ class BoardLayout(unittest.TestCase):
             self.assertLess(bottom, h - 7)  # h - 7 is the separator line over the details
 
 
+class Player(unittest.TestCase):
+    """The painting stands still until 'p'; one press plays the story once."""
+    def make(self):
+        from cavewall import tui
+        now = [100.0]
+        return tui.Player(clock=lambda: now[0]), now
+
+    def test_still_until_played(self):
+        from cavewall import art
+        p, now = self.make()
+        first = p.tick()
+        now[0] += 5
+        self.assertEqual(p.tick(), first)
+        self.assertFalse(p.playing)
+        self.assertLess(first % art.STORY, art.STORY)
+
+    def test_play_runs_from_the_start_then_stops(self):
+        from cavewall import art
+        p, now = self.make()
+        p.toggle()
+        self.assertTrue(p.playing)
+        self.assertEqual(p.tick() % art.STORY, 0)
+        now[0] += 2.0
+        self.assertEqual(p.tick() % art.STORY, 2000 // art.FRAME_MS)
+        now[0] += art.STORY * art.FRAME_MS / 1000
+        p.tick()
+        self.assertFalse(p.playing)  # one story, then rest
+
+    def test_second_press_stops(self):
+        p, now = self.make()
+        p.toggle()
+        now[0] += 3
+        p.toggle()
+        self.assertFalse(p.playing)
+
+    def test_each_play_sings_the_next_anthem(self):
+        from cavewall import art
+        p, now = self.make()
+        p.toggle()
+        a = p.tick() // art.STORY
+        p.toggle()
+        p.toggle()
+        self.assertEqual(p.tick() // art.STORY, a + 1)
+
+    def test_new_board_starts_still(self):
+        from cavewall import tui
+        self.assertFalse(tui.Player().playing)
+
+    def test_help_names_the_key(self):
+        from cavewall import tui
+        self.assertIn("p play", tui.HELP)
+
+
 class CaveHunt(unittest.TestCase):
     """Rock art style: tan wall, brown and red ochre silhouettes, hut, fire, fern, hand stencil.
     One ~30 s story: walk in, throw, the mammoth chases the hunters back into their hut and stops
