@@ -1,0 +1,40 @@
+id = "ugg.cavewall"
+name = "Cave wall"
+version = "0.2.0"
+min_herdr_version = "0.9.5"
+description = "Board of all parallel Claude Code sessions with a 'where was I' card each"
+platforms = ["linux", "macos", "windows"]
+
+# Panes and actions run with this folder as working directory, so `-m cavewall` resolves.
+
+[[panes]]
+id = "board"
+title = "Cave wall"
+platforms = ["linux", "macos"]
+placement = "popup"
+width = "90%"
+height = "85%"
+command = ["python3", "-m", "cavewall", "popup"]
+
+[[panes]]
+id = "board-windows"
+title = "Cave wall"
+platforms = ["windows"]
+placement = "popup"
+width = "90%"
+height = "85%"
+command = ["py", "-3", "-m", "cavewall", "popup"]
+
+[[actions]]
+id = "open"
+title = "Open cave wall"
+contexts = ["workspace"]
+platforms = ["linux", "macos"]
+command = ["python3", "-m", "cavewall", "open"]
+
+[[actions]]
+id = "open-windows"
+title = "Open cave wall"
+contexts = ["workspace"]
+platforms = ["windows"]
+command = ["py", "-3", "-m", "cavewall", "open"]
