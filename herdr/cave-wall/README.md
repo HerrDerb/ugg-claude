@@ -26,6 +26,8 @@ with a short "where was I" card for each one. Sessions that wait for you are lis
 - **Todo lines.** If the last answer ends with `Open todos: 🟢 none | 🔴 ...` and `Optional todos: 🟢 none | 🟠 ...` lines
   (the repo `CLAUDE.md` asks for them), they decide "needs you" and "next" outright, no guessing.
   Without them the board reads the `Implemented: 🟢` status line and looks for a `?`.
+- **Painting.** Free space under the list shows a moving hunt (4 frames a second). herdr is still
+  asked only every 3 s.
 - **Empty sessions** (fresh or only `/clear`) get a 🌱 or 🧹 card without a model call.
 
 ## Keys

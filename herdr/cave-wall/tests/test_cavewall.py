@@ -582,5 +582,39 @@ class CavePainting(unittest.TestCase):
                 self.assertLess(max(map(len, p)), cols)
 
 
+
+class CaveHunt(unittest.TestCase):
+    """The painting moves: mammoth runs left, hunter chases, spear flies, legs swap."""
+    def test_frames_fit_and_have_ground(self):
+        from cavewall import art
+        for rows, cols in ((5, 40), (9, 70), (30, 200)):
+            for tick in range(0, 400, 7):
+                f = art.frame(rows, cols, tick)
+                self.assertIsNotNone(f)
+                self.assertLess(len(f), rows)
+                self.assertTrue(all(len(line) <= cols for line in f))
+                self.assertIn("~", f[-1])
+
+    def test_nothing_when_no_room(self):
+        from cavewall import art
+        self.assertIsNone(art.frame(1, 120, 0))
+        self.assertIsNone(art.frame(20, 10, 0))
+
+    def test_mammoth_runs_left_one_step_per_tick(self):
+        from cavewall import art
+        def eye(t):
+            return next(line.index("(o)") for line in art.frame(20, 120, t) if "(o)" in line)
+        self.assertEqual(eye(10) - eye(11), 1)
+
+    def test_scene_changes_between_ticks(self):
+        from cavewall import art
+        self.assertNotEqual(art.frame(20, 120, 3), art.frame(20, 120, 4))
+
+    def test_hunt_loops_back(self):
+        from cavewall import art
+        period = art.period(120, art.BIG_SCENE)
+        self.assertEqual(art.frame(20, 120, 5), art.frame(20, 120, 5 + period))
+
+
 if __name__ == "__main__":
     unittest.main()

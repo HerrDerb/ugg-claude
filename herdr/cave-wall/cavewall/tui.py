@@ -13,6 +13,7 @@ import unicodedata
 from cavewall import art, board, cards, compat, hook, plugin, worktree
 
 ICON = {"needs_you": "!", "done": "✓", "working": "~", "idle": "·", "blocked": "!", "unknown": "?"}
+FRAME_MS, RELOAD_S = 250, 3
 HELP = " ↑↓/jk move  ⏎ jump  n new worktree  s seed card  d done  ⌂ = base checkout  r refresh  q quit "
 
 
@@ -258,8 +259,9 @@ def run(stdscr, close_on_jump=False):
     for i, c in enumerate((curses.COLOR_RED, curses.COLOR_GREEN, curses.COLOR_YELLOW, curses.COLOR_CYAN), 1):
         curses.init_pair(i, c, -1)
     color = {"needs_you": 1, "done": 2, "working": 3, "blocked": 1}
-    stdscr.timeout(3000)  # auto refresh
+    stdscr.timeout(FRAME_MS)  # animation tick; herdr is asked only every RELOAD_S
     sel, rows, err = 0, *_load()
+    loaded = time.monotonic()
     msg = ""
     while True:
         stdscr.erase()
@@ -282,11 +284,10 @@ def run(stdscr, close_on_jump=False):
             line = f" {ICON.get(key, '?')} {mark} {r['place'][:28]:<28} {age:>8}  {r['goal']}"
             _put(stdscr, 2 + i, 0, line.ljust(w), attr)
         free_top, free_bottom = 2 + min(len(rows), list_h) + 1, h - 7
-        painting = art.pick(free_bottom - free_top + 1, w)
+        painting = art.frame(free_bottom - free_top + 1, w, int(time.monotonic() * 1000 / FRAME_MS))
         if painting:
-            x = max(0, (w - max(map(len, painting))) // 2)
             for i, line in enumerate(painting):
-                _put(stdscr, free_bottom - len(painting) + 1 + i, x, line, curses.color_pair(3) | curses.A_DIM)
+                _put(stdscr, free_bottom - len(painting) + 1 + i, 0, line, curses.color_pair(3) | curses.A_DIM)
         if rows:
             r = rows[sel]
             y = h - 6
@@ -301,10 +302,12 @@ def run(stdscr, close_on_jump=False):
                          curses.color_pair(1) | curses.A_BOLD if label == "YOU" else 0)
                     y += 1
         _put(stdscr, h - 1, 0, f" {msg} " if msg else HELP, curses.A_BOLD if msg else curses.A_DIM)
-        msg = ""
         stdscr.refresh()
 
         k = stdscr.getch()
+        if k == -1 and time.monotonic() - loaded < RELOAD_S:
+            continue  # just the next picture of the hunt
+        msg = ""  # a message lives until the next key or reload
         if k in (ord("q"), 27):
             return
         if k in (curses.KEY_DOWN, ord("j")):
@@ -328,6 +331,7 @@ def run(stdscr, close_on_jump=False):
             if msg is EXIT:
                 return
         rows, err = _load()
+        loaded = time.monotonic()
 
 
 def main(close_on_jump=False):
