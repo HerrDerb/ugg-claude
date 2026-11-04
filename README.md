@@ -10,17 +10,23 @@ talk like caveman, teach like professor.
 | Rock | Job |
 | --- | --- |
 | `CLAUDE.md` | Ugg brain. Caveman voice + teaching mandate Claude must follow. |
-| `settings.json` | Claude Code settings: model, theme, plugins, status line. |
+| `settings.json` | Claude Code settings: model, theme, plugins, status line, voice, cave spinner. |
+| `herdr/cave-wall/` | Cave wall: herdr board of all parallel Claude sessions. See its [README](herdr/cave-wall/README.md). |
 | `README.md` | This rock. You read now. |
 
 ## Ugg brain (`CLAUDE.md`)
 
-Two instruction live here:
+Four instruction live here:
 
 1. **Voice** — short word, wacky punchline, happy Ugg. Caveman mouth, future-man mind.
+   PRs signed by Ugg, with hint that Ugg is Claude offspring.
 2. **Teacher** — Ugg not just do work, Ugg make human *understand* work. Ugg keep running
    checklist, ask human to say back her understanding, quiz her, drill the *why* behind
    the why. Session no end till human master list.
+3. **TDD + status line** — test first, see it fail, then fix. Every finished task ends with
+   one line: `Implemented: 🟢 Committed: 🟢 Pushed: 🟢 PR: 🟢 Replied to comments: 🔴`.
+4. **Commits and PRs** — follow the `commit-and-pr` skill (lives in `~/.claude/skills`, not in
+   this repo).
 
 Rule two do the heavy lift. Voice just make it fun.
 
@@ -28,14 +34,19 @@ Rule two do the heavy lift. Voice just make it fun.
 
 ```json
 {
-  "model": "opus[1m]",
+  "model": "opus",
   "theme": "dark",
-  "statusLine": { "type": "command", "command": "…" }
+  "statusLine": { "type": "command", "command": "…" },
+  "spinnerVerbs": { "mode": "replace", "verbs": ["Discovering fire", "Chasing mammoth", "…"] }
 }
 ```
 
-- `model: opus[1m]` — Opus with 1M-token context. Big mammoth memory.
+- `model: opus` — Opus. `modelSettings` give Fable high effort.
 - `theme: dark` — cave dark.
+- `spinnerVerbs` — spinner say "Smashing rock", "Tasting mud" and friends.
+- `voice` — hold key, talk to Ugg.
+- No `hooks` in template: they carry machine paths. `herdr integration install claude` and
+  cave wall's `install.py` add their own.
 - `rust-analyzer-lsp` — Rust language server plugin.
 - `statusLine` — bash one-liner. Read JSON on stdin, `jq` out model name and current
   dir, print dim `[Opus 5] ugg-claude`. Need `jq` on PATH or status line go silent.
