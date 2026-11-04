@@ -198,6 +198,43 @@ class Settle(unittest.TestCase):
         self.assertTrue(cards.settle({"needs_you": True, "reason": "r", "next": "n"}, tail)["needs_you"])
 
 
+class TodoLines(unittest.TestCase):
+    """Sessions end with 'Open todos:' and 'Optional todos:' lines (CLAUDE.md). They decide, not the model."""
+    def tail(self, body):
+        return [("user", "go"), ("assistant", f"{body}\n\n{DONE}")]
+
+    def test_open_todo_needs_you_even_without_question_mark(self):
+        t = self.tail("Open todos: you rotate the API key\nOptional todos: none")
+        c = cards.settle({"needs_you": False, "reason": "", "next": "nothing, done"}, t)
+        self.assertTrue(c["needs_you"])
+        self.assertEqual(c["reason"], "you rotate the API key")
+        self.assertEqual(c["next"], "you rotate the API key")
+
+    def test_only_optional_todo_does_not_need_you(self):
+        t = self.tail("Should Ugg also bump it?\nOpen todos: none\nOptional todos: bump version")
+        c = cards.settle({"needs_you": True, "reason": "bump?", "next": "x"}, t)
+        self.assertFalse(c["needs_you"])
+        self.assertEqual(c["reason"], "")
+        self.assertEqual(c["next"], "optional: bump version")
+
+    def test_nothing_open_is_done(self):
+        t = self.tail("Open todos: none\nOptional todos: none")
+        c = cards.settle({"needs_you": True, "reason": "r", "next": "n"}, t)
+        self.assertFalse(c["needs_you"])
+        self.assertEqual(c["next"], "nothing, done")
+
+    def test_lines_count_without_green_implemented(self):
+        t = [("assistant", "Tests fail.\nOpen todos: you fix the flaky DB\nOptional todos: none\n"
+                           "Implemented: 🔴")]
+        c = cards.settle({"needs_you": False, "reason": "", "next": ""}, t)
+        self.assertTrue(c["needs_you"])
+
+    def test_later_user_message_ignores_lines(self):
+        t = self.tail("Open todos: you review PR\nOptional todos: none") + [("user", "reviewed")]
+        c = cards.settle({"needs_you": False, "reason": "", "next": "n"}, t)
+        self.assertFalse(c["needs_you"])
+
+
 class CardStore(unittest.TestCase):
     def test_write_then_read_roundtrip(self):
         with tempfile.TemporaryDirectory() as d:

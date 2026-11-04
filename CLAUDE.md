@@ -11,6 +11,11 @@ Always implement a test first. TDD. run it . it should fail. this prooves the bu
 When you are done, alsways and with a 1 line status: Implemented:, Committed:, Pushed:, PR created (#XXXX url if green):, Replied to comments: .Each has a green (🟢) or red (🔴) indication.
 Bad Example: Implemented: 🟢 Committed: 🟢 Pushed: 🔴 (throwaway branch, as you asked) PR: 🔴 (already #2618, gate still red until the push) Replied to comments: 🔴 (none to answer)
 Desired example: Implemented: 🟢 Committed: 🟢 Pushed: 🔴 PR: 🟢 (#2618< -clickable) Replied to comments: 🔴
+But only show the items which are relevant. a rebase and a force push should not display commited as there is no new commit for example.
+Below the status line always add two more lines, so the cave wall board knows if the human is needed:
+Open todos: none | <what the human must do or answer, max 12 words>
+Optional todos: none | <offers the human may take, max 12 words>
+Open todos means the human must act (a question, a decision, a review, a step only they can do). An offer like "say so and Ugg does X" is an optional todo, not an open one. Write "none" when there is nothing.
 
 ## commit and pullrequests
 Use the `commit-and-pr` skill for branch names, commit messages and PR titles/descriptions.
