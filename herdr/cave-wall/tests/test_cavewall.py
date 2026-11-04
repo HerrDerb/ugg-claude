@@ -584,11 +584,20 @@ class CavePainting(unittest.TestCase):
 
 
 class CaveHunt(unittest.TestCase):
-    """The painting moves: mammoth runs left, hunter chases, spear flies, legs swap."""
+    """The painting is one ~30 s story: walk in, sneak, throw, the mammoth chases the hunters
+    back into their cave, leaves, night falls and the cave sings."""
+    def eye(self, t, rows=24, cols=150):
+        from cavewall import art
+        return next(ln.index(e) for ln in art.frame(rows, cols, t) for e in ("(o)", "(O)") if e in ln)
+
+    def hunters(self, t, rows=24, cols=150):
+        from cavewall import art
+        return [i for ln in art.frame(rows, cols, t) for i in range(len(ln)) if ln.startswith("\\o/", i)]
+
     def test_frames_fit_and_have_ground(self):
         from cavewall import art
-        for rows, cols in ((5, 40), (9, 70), (30, 200)):
-            for tick in range(0, 400, 7):
+        for rows, cols in ((5, 40), (9, 70), (16, 100), (30, 200)):
+            for tick in range(0, art.STORY, 7):
                 f = art.frame(rows, cols, tick)
                 self.assertIsNotNone(f)
                 self.assertLess(len(f), rows)
@@ -600,21 +609,56 @@ class CaveHunt(unittest.TestCase):
         self.assertIsNone(art.frame(1, 120, 0))
         self.assertIsNone(art.frame(20, 10, 0))
 
-    def test_mammoth_runs_left_one_step_per_tick(self):
+    def test_story_is_20_to_30_seconds_and_loops(self):
         from cavewall import art
-        def eye(t):
-            return next(line.index("(o)") for line in art.frame(20, 120, t) if "(o)" in line)
-        self.assertEqual(eye(10) - eye(11), 1)
+        self.assertTrue(20 <= art.STORY * 125 / 1000 <= 30)
+        self.assertEqual(art.frame(24, 150, 77), art.frame(24, 150, 77 + art.STORY))
 
-    def test_scene_changes_between_ticks(self):
+    def test_not_just_two_frames(self):
         from cavewall import art
-        self.assertNotEqual(art.frame(20, 120, 3), art.frame(20, 120, 4))
+        pictures = {tuple(art.frame(24, 150, t)) for t in range(art.STORY)}
+        self.assertGreater(len(pictures), 100)
 
-    def test_hunt_loops_back(self):
+    def test_mammoth_walks_in_from_the_right(self):
+        self.assertLess(self.eye(40), self.eye(20))
+
+    def test_mammoth_chases_hunters_back_to_the_cave(self):
+        self.assertLess(self.eye(150), self.eye(125) - 20)       # charges left
+        early, late = self.hunters(124), self.hunters(140)
+        self.assertTrue(early and late)
+        self.assertLess(max(late), max(early))                   # hunters flee left
+        self.assertTrue(all(x < self.eye(140) for x in late))    # and run in front of it
+
+    def test_mammoth_turns_and_goes_home(self):
+        self.assertGreater(self.eye(200), self.eye(180))
+
+    def test_trumpet_and_wacky_anthem(self):
         from cavewall import art
-        period = art.period(120, art.BIG_SCENE)
-        self.assertEqual(art.frame(20, 120, 5), art.frame(20, 120, 5 + period))
+        self.assertIn("PRRAAAH!", "\n".join(art.frame(24, 150, 114)))
+        night = "\n".join(art.frame(24, 150, 230))
+        self.assertTrue(any(a in night for a in art.ANTHEMS))
 
+    def test_tall_space_gets_whole_scenery(self):
+        from cavewall import art
+        tall = art.frame(30, 160, 30)
+        self.assertGreater(len(tall), len(art.frame(9, 160, 30)))
+        text = "\n".join(tall)
+        for thing in ("/\\", "||", "__..------..__"):  # mountains, trees, cave
+            self.assertIn(thing, text)
+
+    def test_day_and_night(self):
+        from cavewall import art
+        day = {c for row in art.scene(30, 160, 60) for _, c in row}
+        night = {c for row in art.scene(30, 160, 230) for _, c in row}
+        self.assertIn("sun", day)
+        self.assertNotIn("sun", night)
+        self.assertTrue({"moon", "star"} <= night)
+
+    def test_natural_colors(self):
+        from cavewall import art
+        colors = {c for row in art.scene(30, 160, 60) for _, c in row} - {None}
+        self.assertTrue({"sun", "fire", "water", "plant", "ochre", "earth"} <= colors)
+        self.assertTrue(colors <= set(art.PALETTE))
 
 if __name__ == "__main__":
     unittest.main()
