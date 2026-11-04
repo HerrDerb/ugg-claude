@@ -167,6 +167,37 @@ class PromptFocus(unittest.TestCase):
         self.assertIn("Implemented:", cards.PROMPT)
 
 
+DONE = "Implemented: 🟢 Committed: 🟢 Pushed: 🟢 PR: 🟢 (#6) Replied to comments: 🔴"
+
+
+class Settle(unittest.TestCase):
+    def test_finished_task_with_optional_offer_does_not_need_you(self):
+        tail = [("user", "update pr"),
+                ("assistant", f"Removing it means a force push. Say so and Ugg will do it.\n\n{DONE}")]
+        c = cards.settle({"needs_you": True, "reason": "Approve force push", "next": "Your call: force push"}, tail)
+        self.assertFalse(c["needs_you"])
+        self.assertEqual(c["reason"], "")
+        self.assertTrue(c["next"].startswith("optional: "))
+
+    def test_finished_task_with_real_question_still_needs_you(self):
+        tail = [("assistant", f"Should I also bump the version?\n\n{DONE}")]
+        c = cards.settle({"needs_you": True, "reason": "bump?", "next": "x"}, tail)
+        self.assertTrue(c["needs_you"])
+
+    def test_without_status_line_model_decides(self):
+        tail = [("assistant", "Say so and Ugg will do it.")]
+        self.assertTrue(cards.settle({"needs_you": True, "reason": "r", "next": "n"}, tail)["needs_you"])
+
+    def test_red_implemented_is_not_finished(self):
+        tail = [("assistant", "Tests fail.\n\nImplemented: 🔴 Committed: 🔴")]
+        self.assertTrue(cards.settle({"needs_you": True, "reason": "r", "next": "n"}, tail)["needs_you"])
+
+    def test_later_user_message_wins(self):
+        # the developer already answered: the old status line no longer settles anything
+        tail = [("assistant", f"Say so.\n\n{DONE}"), ("user", "yes force push")]
+        self.assertTrue(cards.settle({"needs_you": True, "reason": "r", "next": "n"}, tail)["needs_you"])
+
+
 class CardStore(unittest.TestCase):
     def test_write_then_read_roundtrip(self):
         with tempfile.TemporaryDirectory() as d:

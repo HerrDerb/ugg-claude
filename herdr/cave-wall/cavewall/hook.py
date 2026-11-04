@@ -67,6 +67,7 @@ def refresh(session_id, transcript, cwd):
             if not tail:
                 return
             card = cards.parse_card(ask_model(cards.build_prompt(tail, cwd)))
+            card = cards.settle(card, tail) if card else card
             if card:
                 card.update(
                     cwd=cwd,

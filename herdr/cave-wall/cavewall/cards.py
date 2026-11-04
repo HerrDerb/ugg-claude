@@ -78,6 +78,22 @@ def build_prompt(tail, cwd):
     return PROMPT.format(cwd=cwd, conversation=convo)
 
 
+_FINISHED = re.compile(r"Implemented:\s*🟢")
+
+
+def settle(card, tail):
+    """Fixed rule after the model: a finished task (status line 'Implemented: 🟢') whose closing
+    message asks nothing (no '?') does not need the developer, even if it offers an extra."""
+    if not tail or tail[-1][0] != "assistant":
+        return card  # the developer spoke last: the model's reading stands
+    last = tail[-1][1]
+    if _FINISHED.search(last) and "?" not in last and card.get("needs_you"):
+        card = dict(card, needs_you=False, reason="")
+        if card.get("next") and not card["next"].startswith("optional: "):
+            card["next"] = "optional: " + card["next"]
+    return card
+
+
 def is_stale(card_mtime, transcript_mtime, grace=60):
     """Card misses newer conversation (grace absorbs bookkeeping lines written after a turn)."""
     return card_mtime is not None and transcript_mtime - card_mtime > grace
