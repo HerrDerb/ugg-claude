@@ -13,7 +13,7 @@ import unicodedata
 from cavewall import art, board, cards, compat, hook, plugin, worktree
 
 ICON = {"needs_you": "!", "done": "✓", "working": "~", "idle": "·", "blocked": "!", "unknown": "?"}
-FRAME_MS, RELOAD_S = 250, 3
+FRAME_MS, RELOAD_S = 125, 3  # 8 pictures a second; herdr is asked every 3 s
 HELP = " ↑↓/jk move  ⏎ jump  n new worktree  s seed card  d done  ⌂ = base checkout  r refresh  q quit "
 
 
@@ -258,6 +258,38 @@ def _put(win, y, x, text, attr=0):
         pass
 
 
+def _pigments():
+    """Curses attributes for the painting's natural colours (256 colours, else the basic 8)."""
+    attrs, many = {}, getattr(curses, "COLORS", 8) >= 256
+    for n, (name, (c256, c8)) in enumerate(art.PALETTE.items(), 20):
+        try:
+            curses.init_pair(n, c256 if many else getattr(curses, "COLOR_" + c8.upper()), -1)
+            attrs[name] = curses.color_pair(n)
+        except curses.error:
+            attrs[name] = 0
+        if name in ("sun", "fire", "lava"):
+            attrs[name] |= curses.A_BOLD
+    return attrs
+
+
+def _paint(stdscr, top, bottom, w, paint):
+    cells = art.scene(bottom - top + 1, w, int(time.monotonic() * 1000 / FRAME_MS))
+    if not cells:
+        return
+    y0 = bottom - len(cells) + 1
+    for i, row in enumerate(cells):
+        x = 0
+        while x < len(row):  # one addstr per run of the same colour
+            ch, col = row[x]
+            end = x
+            while end < len(row) and row[end][1] == col:
+                end += 1
+            text = "".join(c for c, _ in row[x:end])
+            if text.strip():
+                _put(stdscr, y0 + i, x, text, paint.get(col, curses.A_DIM))
+            x = end
+
+
 def run(stdscr, close_on_jump=False):
     _POPUP[0] = close_on_jump
     for setup in (lambda: curses.curs_set(0), curses.use_default_colors):
@@ -268,6 +300,7 @@ def run(stdscr, close_on_jump=False):
     for i, c in enumerate((curses.COLOR_RED, curses.COLOR_GREEN, curses.COLOR_YELLOW, curses.COLOR_CYAN), 1):
         curses.init_pair(i, c, -1)
     color = {"needs_you": 1, "done": 2, "working": 3, "blocked": 1}
+    paint = _pigments()
     stdscr.timeout(FRAME_MS)  # animation tick; herdr is asked only every RELOAD_S
     sel, rows, err = 0, *_load()
     loaded_at = time.monotonic()
@@ -293,10 +326,7 @@ def run(stdscr, close_on_jump=False):
             line = f" {ICON.get(key, '?')} {mark} {r['place'][:28]:<28} {age:>8}  {r['goal']}"
             _put(stdscr, 2 + i, 0, line.ljust(w), attr)
         free_top, free_bottom = 2 + min(len(rows), list_h) + 1, h - 7
-        painting = art.frame(free_bottom - free_top + 1, w, int(time.monotonic() * 1000 / FRAME_MS))
-        if painting:
-            for i, line in enumerate(painting):
-                _put(stdscr, free_bottom - len(painting) + 1 + i, 0, line, curses.color_pair(3) | curses.A_DIM)
+        _paint(stdscr, free_top, free_bottom, w, paint)
         if rows:
             r = rows[sel]
             y = h - 6
