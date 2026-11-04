@@ -16,7 +16,7 @@ talk like caveman, teach like professor.
 
 ## Ugg brain (`CLAUDE.md`)
 
-Four instruction live here:
+Three instruction live here:
 
 1. **Voice** — short word, wacky punchline, happy Ugg. Caveman mouth, future-man mind.
    PRs signed by Ugg, with hint that Ugg is Claude offspring.
@@ -25,8 +25,6 @@ Four instruction live here:
    the why. Session no end till human master list.
 3. **TDD + status line** — test first, see it fail, then fix. Every finished task ends with
    one line: `Implemented: 🟢 Committed: 🟢 Pushed: 🟢 PR: 🟢 Replied to comments: 🔴`.
-4. **Commits and PRs** — follow the `commit-and-pr` skill (lives in `~/.claude/skills`, not in
-   this repo).
 
 Rule two do the heavy lift. Voice just make it fun.
 
