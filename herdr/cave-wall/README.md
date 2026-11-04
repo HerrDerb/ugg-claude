@@ -1,0 +1,75 @@
+# Cave wall
+
+A board in [herdr](https://herdr.dev) that shows every Claude Code session you run in parallel,
+with a short "where was I" card for each one. Sessions that wait for you are listed first.
+
+```
+ 🪨 cave wall  29 sessions  6 need you
+ ! ⌂ shop-api                       4m  Ship retry fix for payment webhook via PR
+ ! ⌂ web-app                       12m  Bump Java 21 to 25 and get it merged
+ ✓   shop-api/bug-549               1h  Find root cause of bug 549
+ ~   docs/worktree-calm-field       now Rewrite install guide
+ ·   infra                          2h  🧹 cleared, ready for a new hunt
+ ────────────────────────────────────────────────────────────────
+ state  PR #2653 open, tests green, CI pending
+ next   CI running, then verify tag on dev
+ ↑↓/jk move  ⏎ jump  n new worktree  s seed card  d done  ⌂ = base checkout
+```
+
+## How it works
+
+- **Card writer.** A Claude Code `Stop` hook runs after every finished turn. It returns at once
+  and starts a detached `claude -p --model haiku` that reads the end of the transcript and writes
+  a card (goal, state, next step, needs you) to `~/.claude/cavewall/<session>.json`.
+- **Board.** Joins `herdr agent list` with the cards by session id. It also repaints cards that
+  are older than their transcript, which covers sessions started before the hook existed.
+- **Empty sessions** (fresh or only `/clear`) get a 🌱 or 🧹 card without a model call.
+
+## Keys
+
+| Key | Does |
+| --- | --- |
+| `↑↓` / `jk` | move |
+| `Enter` | jump to the session's pane (closes the popup) |
+| `n` | new worktree of the row's repo from fresh `origin/main`, with Claude started in it. Works on a base checkout or a worktree row. Empty branch name = herdr picks one |
+| `s` | write this session's card now |
+| `d` | done. Worktree: delete it and close its terminal. Base checkout: `git reset --hard` and check out the default branch (branch kept). Asks first; needs capital `Y` when something would be lost |
+| `r` / `q` | refresh / quit |
+
+`⌂` marks a base checkout, as opposed to a worktree.
+
+## Install
+
+Needs Python 3 (standard library only), `git`, `herdr` and the `claude` CLI. `gh` is optional
+and adds the PR link to cards. Runs on Linux, macOS and Windows.
+
+```bash
+python3 install.py            # Windows: py install.py
+herdr server reload-config
+```
+
+The installer is safe to run again and writes `.bak-cavewall` backups first. It sets up:
+
+1. a `cavewall` launcher in `~/.local/bin`
+2. the `Stop` hook in `~/.claude/settings.json`
+3. the `ctrl+alt+w` popup key in herdr's `config.toml`
+
+On Windows also run `py -m pip install windows-curses`.
+
+Remove everything again with `python3 install.py --uninstall`.
+
+Already running Claude sessions do not load new hooks; the board repaints their cards instead.
+
+## Things to know
+
+- **Cost:** one small haiku call per finished turn, in every session (the hook is global).
+- **Privacy:** cards are plain JSON in `~/.claude/cavewall/` and can contain project context.
+  The transcript tail goes to Anthropic, as in normal Claude use.
+- **`d` is destructive** by design. Read the prompt before you press `Y`.
+- Settings: `CAVEWALL_MODEL` (default `haiku`), `CAVEWALL_DIR` (default `~/.claude/cavewall`).
+
+## Develop
+
+```bash
+python3 -m unittest
+```

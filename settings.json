@@ -1,6 +1,9 @@
 {
-  "model": "opus[1m]",
-  "theme": "dark",
+  "model": "opus",
+  "statusLine": {
+    "type": "command",
+    "command": "input=$(cat); model=$(echo \"$input\" | jq -r '.model.display_name'); dir=$(echo \"$input\" | jq -r '.workspace.current_dir' | xargs basename); printf '\\033[2m[%s]\\033[0m %s' \"$model\" \"$dir\""
+  },
   "spinnerVerbs": {
     "mode": "replace",
     "verbs": [
@@ -28,8 +31,5 @@
       "Tasting mud"
     ]
   },
-  "statusLine": {
-    "type": "command",
-    "command": "input=$(cat); model=$(echo \"$input\" | jq -r '.model.display_name'); dir=$(echo \"$input\" | jq -r '.workspace.current_dir' | xargs basename); printf '\\033[2m[%s]\\033[0m %s' \"$model\" \"$dir\""
-  }
+  "theme": "dark"
 }
