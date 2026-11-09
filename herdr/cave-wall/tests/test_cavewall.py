@@ -507,3 +507,42 @@ class CavePainting(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ModelCallEncoding(unittest.TestCase):
+    """The prompt holds emoji (🟢). On Windows the default pipe encoding is cp1252 and cannot carry them."""
+
+    def test_emoji_prompt_reaches_model_and_comes_back(self):
+        import subprocess
+        import sys
+        from unittest import mock
+        from cavewall import hook
+
+        echo = ("import sys; sys.stdout.buffer.write(sys.stdin.buffer.read())")
+        real_run = subprocess.run
+
+        def fake_run(cmd, **kw):  # same pipe settings as the real call, a utf-8 echo instead of claude
+            return real_run([sys.executable, "-c", echo], **kw)
+
+        with mock.patch.object(hook.subprocess, "run", fake_run):
+            self.assertEqual(hook.ask_model('{"state": "PR 🟢 🔴"}'), '{"state": "PR 🟢 🔴"}')
+
+
+class HerdrOutputEncoding(unittest.TestCase):
+    """herdr prints terminal titles with emoji as UTF-8; cp1252 decoding crashed the board load."""
+
+    def test_agent_list_with_emoji_title_parses(self):
+        import subprocess
+        import sys
+        from unittest import mock
+
+        payload = json.dumps({"result": {"agents": [{"terminal_title_stripped": "✳ 🪨 hunt"}]}}, ensure_ascii=False)
+        script = f"import sys; sys.stdout.buffer.write({payload.encode('utf-8')!r})"
+        real_run = subprocess.run
+
+        def fake_run(cmd, **kw):
+            return real_run([sys.executable, "-c", script], **kw)
+
+        with mock.patch.object(board.subprocess, "run", fake_run):
+            self.assertEqual(board.herdr_agents()[0]["terminal_title_stripped"], "✳ 🪨 hunt")
+

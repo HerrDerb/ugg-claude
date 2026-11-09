@@ -5,7 +5,7 @@ from cavewall import compat
 
 
 def _git(path, *args):
-    r = subprocess.run(["git", "-C", path, *args], capture_output=True, text=True, timeout=10)
+    r = subprocess.run(["git", "-C", path, *args], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=10)
     return r.returncode, r.stdout
 
 
@@ -66,7 +66,7 @@ def reset_to_default(path):
     """git reset --hard, then check out the default branch. Returns error text or ''."""
     try:
         for args in (("reset", "--hard", "-q"), ("checkout", "-q", default_branch(path))):
-            r = subprocess.run(["git", "-C", path, *args], capture_output=True, text=True, timeout=30)
+            r = subprocess.run(["git", "-C", path, *args], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=30)
             if r.returncode != 0:
                 return (r.stderr or r.stdout).strip()[:200] or f"git {args[0]} failed"
     except (OSError, subprocess.TimeoutExpired) as e:
@@ -123,7 +123,7 @@ def create_with_agent(repo_root, branch, taken_names):
            "--base", f"origin/{default}" if fetched else default]
     if branch:
         cmd += ["--branch", branch]
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
     try:
         res = json.loads(r.stdout)["result"]
     except (ValueError, KeyError):
@@ -132,7 +132,7 @@ def create_with_agent(repo_root, branch, taken_names):
     made = res["worktree"]["branch"]
     name = agent_name(branch or made.split("/")[-1], taken_names)
     a = subprocess.run([compat.exe("herdr"), "agent", "start", name, "--kind", "claude", "--pane", pane, "--timeout", "60000"],
-                       capture_output=True, text=True, timeout=90)
+                       capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=90)
     base = f"origin/{default}" if fetched else f"{default} (fetch failed, local)"
     if a.returncode == 0:
         return pane, f"new worktree {made} from {base}, Claude ready"
@@ -144,7 +144,7 @@ def create_with_agent(repo_root, branch, taken_names):
 def remove(workspace_id, force):
     """Remove the checkout, then close the workspace if herdr left it open. Returns error text or ''."""
     cmd = [compat.exe("herdr"), "worktree", "remove", "--workspace", workspace_id] + (["--force"] if force else [])
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+    r = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=60)
     if r.returncode != 0:
         return (r.stderr or r.stdout).strip()[:200] or "worktree remove failed"
     if subprocess.run([compat.exe("herdr"), "workspace", "get", workspace_id], capture_output=True, timeout=5).returncode == 0:

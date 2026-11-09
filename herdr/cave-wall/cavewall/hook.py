@@ -17,7 +17,8 @@ MODEL = os.environ.get("CAVEWALL_MODEL", "haiku")
 
 def _run(cmd, cwd, timeout):
     try:
-        r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True, timeout=timeout,
+                           encoding="utf-8", errors="replace")
         return r.stdout.strip() if r.returncode == 0 else ""
     except (OSError, subprocess.TimeoutExpired):
         return ""
@@ -32,7 +33,8 @@ def ask_model(prompt):
              "--setting-sources", "", "--system-prompt",
              "You write terse JSON status cards. Output only JSON.", ],
             input=prompt, cwd=cards.CARD_DIR, env=env,
-            capture_output=True, text=True, timeout=120)
+            capture_output=True, text=True, timeout=120,
+            encoding="utf-8", errors="replace")  # Windows default cp1252 cannot carry the emoji in the prompt
         return r.stdout
     except (OSError, subprocess.TimeoutExpired):
         return ""
