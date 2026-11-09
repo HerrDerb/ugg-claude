@@ -549,3 +549,21 @@ class HerdrOutputEncoding(unittest.TestCase):
         with mock.patch.object(board.subprocess, "run", fake_run):
             self.assertEqual(board.herdr_agents()[0]["terminal_title_stripped"], "✳ 🪨 hunt")
 
+
+class ReloadOnlyWhenNeeded(unittest.TestCase):
+    """Moving the cursor must not wait for herdr, git and transcript reads (~0.3 s per key)."""
+
+    def test_cursor_moves_do_not_reload(self):
+        import curses
+        from cavewall import tui
+        for k in (curses.KEY_UP, curses.KEY_DOWN, ord("j"), ord("k")):
+            self.assertFalse(tui.needs_reload(k, loaded_at=100.0, now=101.0))
+
+    def test_idle_tick_refresh_and_actions_reload(self):
+        from cavewall import tui
+        for k in (-1, ord("r"), ord("s"), ord("d"), ord("n")):
+            self.assertTrue(tui.needs_reload(k, loaded_at=100.0, now=101.0))
+
+    def test_old_data_reloads_even_while_moving(self):
+        from cavewall import tui
+        self.assertTrue(tui.needs_reload(ord("j"), loaded_at=100.0, now=104.0))
