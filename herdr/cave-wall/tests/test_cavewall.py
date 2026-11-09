@@ -447,8 +447,11 @@ class CrossPlatform(unittest.TestCase):
         self.assertEqual(compat.detach_kwargs("posix"), {"start_new_session": True})
         win = compat.detach_kwargs("nt")
         self.assertNotIn("start_new_session", win)
-        self.assertTrue(win["creationflags"] & 0x00000008)  # DETACHED_PROCESS
-        self.assertTrue(win["creationflags"] & 0x08000000)  # CREATE_NO_WINDOW
+        # DETACHED_PROCESS leaves the child without a console (CREATE_NO_WINDOW is then ignored),
+        # so every claude/git/gh it starts pops up a new console window.
+        self.assertFalse(win["creationflags"] & 0x00000008)  # DETACHED_PROCESS
+        self.assertTrue(win["creationflags"] & 0x08000000)  # CREATE_NO_WINDOW: hidden console, inherited
+        self.assertTrue(win["creationflags"] & 0x00000200)  # CREATE_NEW_PROCESS_GROUP: no Ctrl+C from us
 
     def test_exe_resolves_or_falls_back_to_name(self):
         from cavewall import compat
