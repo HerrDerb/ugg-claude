@@ -182,6 +182,15 @@ def _repaint_stale(rows, per_round=3, cooldown=120):
             started += 1
 
 
+_MOVES = (curses.KEY_UP, curses.KEY_DOWN, ord("j"), ord("k"))
+REFRESH_EVERY = 3.0
+
+
+def needs_reload(k, loaded_at, now):
+    """Cursor moves only redraw; reloading costs herdr, git and transcript reads."""
+    return k not in _MOVES or now - loaded_at >= REFRESH_EVERY
+
+
 def _load():
     try:
         agents, have = board.herdr_agents(), cards.read_cards(cards.CARD_DIR)
@@ -240,6 +249,7 @@ def run(stdscr, close_on_jump=False):
     color = {"needs_you": 1, "done": 2, "working": 3, "blocked": 1}
     stdscr.timeout(3000)  # auto refresh
     sel, rows, err = 0, *_load()
+    loaded_at = time.monotonic()
     msg = ""
     while True:
         stdscr.erase()
@@ -305,7 +315,9 @@ def run(stdscr, close_on_jump=False):
             msg = _seed(rows[sel])
         elif k == ord("d") and rows:
             msg = _delete(stdscr, rows[sel], rows)
-        rows, err = _load()
+        if needs_reload(k, loaded_at, time.monotonic()):
+            rows, err = _load()
+            loaded_at = time.monotonic()
 
 
 def main(close_on_jump=False):

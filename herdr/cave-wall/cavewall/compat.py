@@ -16,8 +16,10 @@ def exe(name):
 def detach_kwargs(os_name=os.name):
     """Popen arguments for a child that outlives us and has no console window."""
     if os_name == "nt":
-        DETACHED_PROCESS, CREATE_NEW_PROCESS_GROUP, CREATE_NO_WINDOW = 0x8, 0x200, 0x08000000
-        return {"creationflags": DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW}
+        # Not DETACHED_PROCESS: it drops the console, and then every console tool the child
+        # starts (claude, git, gh) opens a window. A hidden console is inherited instead.
+        CREATE_NEW_PROCESS_GROUP, CREATE_NO_WINDOW = 0x200, 0x08000000
+        return {"creationflags": CREATE_NEW_PROCESS_GROUP | CREATE_NO_WINDOW}
     return {"start_new_session": True}
 
 

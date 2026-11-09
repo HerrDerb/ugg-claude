@@ -90,9 +90,11 @@ def _say(quiet, *a):
         print(*a)
 
 
-def _hook_command():
-    # absolute path: hooks may run without ~/.local/bin on PATH
-    return f'"{LAUNCHER}" hook' if " " in LAUNCHER else f"{LAUNCHER} hook"
+def hook_command(launcher):
+    # absolute path: hooks may run without ~/.local/bin on PATH.
+    # Claude Code runs hooks through bash, also on Windows (Git Bash), where
+    # backslashes are escape characters: use forward slashes and quote.
+    return f'"{launcher.replace(chr(92), "/")}" hook'
 
 
 def install(home, herdr_config, quiet=False):
@@ -117,7 +119,7 @@ def install(home, herdr_config, quiet=False):
             settings = json.load(f)
         _backup(settings_path, quiet)
     with open(settings_path, "w", encoding="utf-8") as f:
-        json.dump(merge_hook(settings, _hook_command()), f, indent=2)
+        json.dump(merge_hook(settings, hook_command(LAUNCHER)), f, indent=2)
         f.write("\n")
     _say(quiet, f"  hook     {settings_path} (new sessions pick it up; the board repaints old ones)")
 

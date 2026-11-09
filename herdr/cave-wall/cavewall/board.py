@@ -79,7 +79,7 @@ def refuge(rows, doomed):
 
 def focused_workspace():
     try:
-        out = subprocess.run([compat.exe("herdr"), "workspace", "list"], capture_output=True, text=True, timeout=5)
+        out = subprocess.run([compat.exe("herdr"), "workspace", "list"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=5)
         return next((w["workspace_id"] for w in json.loads(out.stdout)["result"]["workspaces"]
                      if w.get("focused")), None)
     except (OSError, ValueError, KeyError, subprocess.TimeoutExpired):
@@ -87,12 +87,12 @@ def focused_workspace():
 
 
 def herdr_agents():
-    out = subprocess.run([compat.exe("herdr"), "agent", "list"], capture_output=True, text=True, timeout=5)
+    out = subprocess.run([compat.exe("herdr"), "agent", "list"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=5)
     return json.loads(out.stdout)["result"]["agents"]
 
 
 def herdr_workspaces():
-    out = subprocess.run([compat.exe("herdr"), "workspace", "list"], capture_output=True, text=True, timeout=5)
+    out = subprocess.run([compat.exe("herdr"), "workspace", "list"], capture_output=True, text=True, encoding="utf-8", errors="replace", timeout=5)
     return json.loads(out.stdout)["result"]["workspaces"]
 
 

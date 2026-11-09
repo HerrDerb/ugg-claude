@@ -38,6 +38,17 @@ class MergeHook(unittest.TestCase):
         self.assertEqual(s["hooks"]["Stop"], [keep])
 
 
+class HookCommand(unittest.TestCase):
+    def test_windows_path_survives_bash(self):
+        # Claude Code runs hooks via bash on Windows: backslashes get eaten
+        cmd = install.hook_command(r"C:\Users\Me\.local\share\cave-wall\cavewall.cmd")
+        self.assertEqual(cmd, '"C:/Users/Me/.local/share/cave-wall/cavewall.cmd" hook')
+
+    def test_path_with_spaces_is_quoted(self):
+        cmd = install.hook_command("/home/a b/cave-wall/cavewall.sh")
+        self.assertEqual(cmd, '"/home/a b/cave-wall/cavewall.sh" hook')
+
+
 class HerdrKey(unittest.TestCase):
     def test_appends_block_once(self):
         t = install.add_herdr_key('theme = "x"\n', "/opt/cw popup")

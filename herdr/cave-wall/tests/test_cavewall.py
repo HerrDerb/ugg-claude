@@ -447,8 +447,11 @@ class CrossPlatform(unittest.TestCase):
         self.assertEqual(compat.detach_kwargs("posix"), {"start_new_session": True})
         win = compat.detach_kwargs("nt")
         self.assertNotIn("start_new_session", win)
-        self.assertTrue(win["creationflags"] & 0x00000008)  # DETACHED_PROCESS
-        self.assertTrue(win["creationflags"] & 0x08000000)  # CREATE_NO_WINDOW
+        # DETACHED_PROCESS leaves the child without a console (CREATE_NO_WINDOW is then ignored),
+        # so every claude/git/gh it starts pops up a new console window.
+        self.assertFalse(win["creationflags"] & 0x00000008)  # DETACHED_PROCESS
+        self.assertTrue(win["creationflags"] & 0x08000000)  # CREATE_NO_WINDOW: hidden console, inherited
+        self.assertTrue(win["creationflags"] & 0x00000200)  # CREATE_NEW_PROCESS_GROUP: no Ctrl+C from us
 
     def test_exe_resolves_or_falls_back_to_name(self):
         from cavewall import compat
@@ -507,3 +510,60 @@ class CavePainting(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ModelCallEncoding(unittest.TestCase):
+    """The prompt holds emoji (🟢). On Windows the default pipe encoding is cp1252 and cannot carry them."""
+
+    def test_emoji_prompt_reaches_model_and_comes_back(self):
+        import subprocess
+        import sys
+        from unittest import mock
+        from cavewall import hook
+
+        echo = ("import sys; sys.stdout.buffer.write(sys.stdin.buffer.read())")
+        real_run = subprocess.run
+
+        def fake_run(cmd, **kw):  # same pipe settings as the real call, a utf-8 echo instead of claude
+            return real_run([sys.executable, "-c", echo], **kw)
+
+        with mock.patch.object(hook.subprocess, "run", fake_run):
+            self.assertEqual(hook.ask_model('{"state": "PR 🟢 🔴"}'), '{"state": "PR 🟢 🔴"}')
+
+
+class HerdrOutputEncoding(unittest.TestCase):
+    """herdr prints terminal titles with emoji as UTF-8; cp1252 decoding crashed the board load."""
+
+    def test_agent_list_with_emoji_title_parses(self):
+        import subprocess
+        import sys
+        from unittest import mock
+
+        payload = json.dumps({"result": {"agents": [{"terminal_title_stripped": "✳ 🪨 hunt"}]}}, ensure_ascii=False)
+        script = f"import sys; sys.stdout.buffer.write({payload.encode('utf-8')!r})"
+        real_run = subprocess.run
+
+        def fake_run(cmd, **kw):
+            return real_run([sys.executable, "-c", script], **kw)
+
+        with mock.patch.object(board.subprocess, "run", fake_run):
+            self.assertEqual(board.herdr_agents()[0]["terminal_title_stripped"], "✳ 🪨 hunt")
+
+
+class ReloadOnlyWhenNeeded(unittest.TestCase):
+    """Moving the cursor must not wait for herdr, git and transcript reads (~0.3 s per key)."""
+
+    def test_cursor_moves_do_not_reload(self):
+        import curses
+        from cavewall import tui
+        for k in (curses.KEY_UP, curses.KEY_DOWN, ord("j"), ord("k")):
+            self.assertFalse(tui.needs_reload(k, loaded_at=100.0, now=101.0))
+
+    def test_idle_tick_refresh_and_actions_reload(self):
+        from cavewall import tui
+        for k in (-1, ord("r"), ord("s"), ord("d"), ord("n")):
+            self.assertTrue(tui.needs_reload(k, loaded_at=100.0, now=101.0))
+
+    def test_old_data_reloads_even_while_moving(self):
+        from cavewall import tui
+        self.assertTrue(tui.needs_reload(ord("j"), loaded_at=100.0, now=104.0))
