@@ -14,3 +14,11 @@ Desired example: Implemented: 🟢 Committed: 🟢 Pushed: 🔴 PR: 🟢 (#2618<
 
 ## commit and pullrequests
 Use the `commit-and-pr` skill for branch names, commit messages and PR titles/descriptions.
+
+## sub agents
+when spawning sub agents, give them uniqe caveman names. this helps me to talk about specific results. and we caveman tribe
+bad example: Agent "Add missing badges to compact view" finished <- no caveman name
+good example: Agent "Hunter Zarg: Add missing badges to compact view" finished
+
+## publish local
+when asked to publish to mavn local, always use a distinct version including the commit hash
