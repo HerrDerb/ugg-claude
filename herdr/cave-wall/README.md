@@ -23,6 +23,16 @@ with a short "where was I" card for each one. Sessions that wait for you are lis
   a card (goal, state, next step, needs you) to `~/.claude/cavewall/<session>.json`.
 - **Board.** Joins `herdr agent list` with the cards by session id. It also repaints cards that
   are older than their transcript, which covers sessions started before the hook existed.
+- **Todo lines.** If the last answer ends with `Open todos: 🟢 none | 🔴 ...` and `Optional todos: 🟢 none | 🟠 ...` lines
+  (the repo `CLAUDE.md` asks for them), they decide "needs you" and "next" outright, no guessing.
+  Without them the board reads the `Implemented: 🟢` status line and looks for a `?`.
+- **Painting.** Free space under the list becomes rock art on your terminal background: silhouettes in ochre brown
+  and red ochre, a teepee hut with a fire, fern trees, a sun glyph and a red hand stencil. A deer
+  herd grazes on the upper wall and bolts when the mammoth trumpets. A 30 s story plays
+  on it: a mammoth and her baby walk in, the hunters throw, the mammoth chases them back into
+  the hut and stops at the fire, walks home, and the hunters dance round the fire and sing a wacky anthem
+  over their heads. It stands still until you press `p`, then plays once at 4 pictures a second.
+  A new board starts still. herdr is asked every 3 s either way.
 - **Empty sessions** (fresh or only `/clear`) get a 🌱 or 🧹 card without a model call.
 
 ## Keys
@@ -33,6 +43,7 @@ with a short "where was I" card for each one. Sessions that wait for you are lis
 | `Enter` | jump to the session's pane (closes the popup) |
 | `n` | new worktree of the row's repo from fresh `origin/main`, with Claude started in it. Works on a base checkout or a worktree row. Empty branch name = herdr picks one |
 | `s` | write this session's card now |
+| `p` | play the cave painting once (30 s); `p` again stops it |
 | `d` | done. Worktree: delete it and close its terminal. Base checkout: `git reset --hard` and check out the default branch (branch kept). Asks first; needs capital `Y` when something would be lost |
 | `r` / `q` | refresh / quit |
 
@@ -52,7 +63,8 @@ The installer is safe to run again and writes `.bak-cavewall` backups first. It 
 
 1. a `cavewall` launcher in `~/.local/bin`
 2. the `Stop` hook in `~/.claude/settings.json`
-3. the `ctrl+alt+w` popup key in herdr's `config.toml`
+3. links this folder as herdr plugin `ugg.cavewall` (`herdr-plugin.toml`) and binds `ctrl+alt+w`
+   to its `open` action. Falls back to a plain popup key if the link fails.
 
 On Windows also run `py -m pip install windows-curses`.
 
@@ -66,6 +78,10 @@ Already running Claude sessions do not load new hooks; the board repaints their 
 - **Privacy:** cards are plain JSON in `~/.claude/cavewall/` and can contain project context.
   The transcript tail goes to Anthropic, as in normal Claude use.
 - **`d` is destructive** by design. Read the prompt before you press `Y`.
+- **Deleting the board's own workspace:** herdr closes every pane of a closed workspace, the
+  board popup included, and plugin popups can only open on the active pane. So a detached relay
+  focuses a safe workspace (the repo's base checkout if open), removes the worktree, cleans the
+  cards and opens the board again there.
 - Settings: `CAVEWALL_MODEL` (default `haiku`), `CAVEWALL_DIR` (default `~/.claude/cavewall`).
 
 ## Develop

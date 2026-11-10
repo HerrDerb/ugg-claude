@@ -167,6 +167,83 @@ class PromptFocus(unittest.TestCase):
         self.assertIn("Implemented:", cards.PROMPT)
 
 
+DONE = "Implemented: 🟢 Committed: 🟢 Pushed: 🟢 PR: 🟢 (#6) Replied to comments: 🔴"
+
+
+class Settle(unittest.TestCase):
+    def test_finished_task_with_optional_offer_does_not_need_you(self):
+        tail = [("user", "update pr"),
+                ("assistant", f"Removing it means a force push. Say so and Ugg will do it.\n\n{DONE}")]
+        c = cards.settle({"needs_you": True, "reason": "Approve force push", "next": "Your call: force push"}, tail)
+        self.assertFalse(c["needs_you"])
+        self.assertEqual(c["reason"], "")
+        self.assertTrue(c["next"].startswith("optional: "))
+
+    def test_finished_task_with_real_question_still_needs_you(self):
+        tail = [("assistant", f"Should I also bump the version?\n\n{DONE}")]
+        c = cards.settle({"needs_you": True, "reason": "bump?", "next": "x"}, tail)
+        self.assertTrue(c["needs_you"])
+
+    def test_without_status_line_model_decides(self):
+        tail = [("assistant", "Say so and Ugg will do it.")]
+        self.assertTrue(cards.settle({"needs_you": True, "reason": "r", "next": "n"}, tail)["needs_you"])
+
+    def test_red_implemented_is_not_finished(self):
+        tail = [("assistant", "Tests fail.\n\nImplemented: 🔴 Committed: 🔴")]
+        self.assertTrue(cards.settle({"needs_you": True, "reason": "r", "next": "n"}, tail)["needs_you"])
+
+    def test_later_user_message_wins(self):
+        # the developer already answered: the old status line no longer settles anything
+        tail = [("assistant", f"Say so.\n\n{DONE}"), ("user", "yes force push")]
+        self.assertTrue(cards.settle({"needs_you": True, "reason": "r", "next": "n"}, tail)["needs_you"])
+
+
+class TodoLines(unittest.TestCase):
+    """Sessions end with 'Open todos:' and 'Optional todos:' lines (CLAUDE.md). They decide, not the model."""
+    def tail(self, body):
+        return [("user", "go"), ("assistant", f"{body}\n\n{DONE}")]
+
+    def test_open_todo_needs_you_even_without_question_mark(self):
+        t = self.tail("Open todos: you rotate the API key\nOptional todos: none")
+        c = cards.settle({"needs_you": False, "reason": "", "next": "nothing, done"}, t)
+        self.assertTrue(c["needs_you"])
+        self.assertEqual(c["reason"], "you rotate the API key")
+        self.assertEqual(c["next"], "you rotate the API key")
+
+    def test_only_optional_todo_does_not_need_you(self):
+        t = self.tail("Should Ugg also bump it?\nOpen todos: none\nOptional todos: bump version")
+        c = cards.settle({"needs_you": True, "reason": "bump?", "next": "x"}, t)
+        self.assertFalse(c["needs_you"])
+        self.assertEqual(c["reason"], "")
+        self.assertEqual(c["next"], "optional: bump version")
+
+    def test_nothing_open_is_done(self):
+        t = self.tail("Open todos: none\nOptional todos: none")
+        c = cards.settle({"needs_you": True, "reason": "r", "next": "n"}, t)
+        self.assertFalse(c["needs_you"])
+        self.assertEqual(c["next"], "nothing, done")
+
+    def test_lines_count_without_green_implemented(self):
+        t = [("assistant", "Tests fail.\nOpen todos: you fix the flaky DB\nOptional todos: none\n"
+                           "Implemented: 🔴")]
+        c = cards.settle({"needs_you": False, "reason": "", "next": ""}, t)
+        self.assertTrue(c["needs_you"])
+
+    def test_colored_symbols(self):
+        t = self.tail("Open todos: 🟢 none\nOptional todos: 🟠 bump version")
+        c = cards.settle({"needs_you": True, "reason": "r", "next": "n"}, t)
+        self.assertFalse(c["needs_you"])
+        self.assertEqual(c["next"], "optional: bump version")
+        t = self.tail("Open todos: 🔴 you review PR #3\nOptional todos: 🟢 none")
+        c = cards.settle({"needs_you": False, "reason": "", "next": ""}, t)
+        self.assertEqual(c["reason"], "you review PR #3")
+
+    def test_later_user_message_ignores_lines(self):
+        t = self.tail("Open todos: you review PR\nOptional todos: none") + [("user", "reviewed")]
+        c = cards.settle({"needs_you": False, "reason": "", "next": "n"}, t)
+        self.assertFalse(c["needs_you"])
+
+
 class CardStore(unittest.TestCase):
     def test_write_then_read_roundtrip(self):
         with tempfile.TemporaryDirectory() as d:
@@ -485,28 +562,183 @@ class CrossPlatform(unittest.TestCase):
             self.assertNotIn("os.fork", f.read_text(encoding="utf-8"), f.name)
 
 
-class CavePainting(unittest.TestCase):
-    def test_big_painting_when_lots_of_room(self):
-        from cavewall import art
-        self.assertIs(art.pick(rows=20, cols=120), art.BIG)
+class BoardLayout(unittest.TestCase):
+    def test_painting_ends_above_the_separator(self):
+        from cavewall import tui
+        for h in (20, 40, 60):
+            top, bottom = tui.free_area(h, shown=3)
+            self.assertLess(bottom, h - 7)  # h - 7 is the separator line over the details
 
-    def test_small_painting_when_little_room(self):
+
+class Player(unittest.TestCase):
+    """The painting stands still until 'p'; one press plays the story once."""
+    def make(self):
+        from cavewall import tui
+        now = [100.0]
+        return tui.Player(clock=lambda: now[0]), now
+
+    def test_still_until_played(self):
         from cavewall import art
-        self.assertIs(art.pick(rows=len(art.SMALL) + 1, cols=60), art.SMALL)
+        p, now = self.make()
+        first = p.tick()
+        now[0] += 5
+        self.assertEqual(p.tick(), first)
+        self.assertFalse(p.playing)
+        self.assertLess(first % art.STORY, art.STORY)
+
+    def test_play_runs_from_the_start_then_stops(self):
+        from cavewall import art
+        p, now = self.make()
+        p.toggle()
+        self.assertTrue(p.playing)
+        self.assertEqual(p.tick() % art.STORY, 0)
+        now[0] += 2.0
+        self.assertEqual(p.tick() % art.STORY, 2000 // art.FRAME_MS)
+        now[0] += art.STORY * art.FRAME_MS / 1000
+        p.tick()
+        self.assertFalse(p.playing)  # one story, then rest
+
+    def test_second_press_stops(self):
+        p, now = self.make()
+        p.toggle()
+        now[0] += 3
+        p.toggle()
+        self.assertFalse(p.playing)
+
+    def test_each_play_sings_the_next_anthem(self):
+        from cavewall import art
+        p, now = self.make()
+        p.toggle()
+        a = p.tick() // art.STORY
+        p.toggle()
+        p.toggle()
+        self.assertEqual(p.tick() // art.STORY, a + 1)
+
+    def test_new_board_starts_still(self):
+        from cavewall import tui
+        self.assertFalse(tui.Player().playing)
+
+    def test_help_names_the_key(self):
+        from cavewall import tui
+        self.assertIn("p play", tui.HELP)
+
+
+class CaveHunt(unittest.TestCase):
+    """Rock art style: tan wall, brown and red ochre silhouettes, hut, fire, fern, hand stencil.
+    One ~30 s story: walk in, throw, the mammoth chases the hunters back into their hut and stops
+    at the fire, turns, walks home, the hunters dance and scratch an anthem into the rock."""
+    def at(self, t, rows=14, cols=120):
+        from cavewall import art
+        return art.cast(rows, cols, t)
+
+    def test_frames_fit(self):
+        from cavewall import art
+        for rows, cols in ((5, 40), (9, 70), (16, 100), (30, 200)):
+            for tick in range(0, art.STORY, 5):
+                f = art.scene(rows, cols, tick)
+                self.assertIsNotNone(f)
+                self.assertLess(len(f), rows)
+                self.assertTrue(all(len(row) == cols for row in f))
 
     def test_nothing_when_no_room(self):
         from cavewall import art
-        self.assertIsNone(art.pick(rows=1, cols=120))
-        self.assertIsNone(art.pick(rows=20, cols=10))
+        self.assertIsNone(art.scene(1, 120, 0))
+        self.assertIsNone(art.scene(20, 10, 0))
 
-    def test_painting_fits_what_it_claims(self):
+    def test_story_is_20_to_30_seconds_and_loops(self):
         from cavewall import art
-        for rows, cols in ((5, 40), (9, 70), (30, 200)):
-            p = art.pick(rows, cols)
-            if p:
-                self.assertLess(len(p), rows)
-                self.assertLess(max(map(len, p)), cols)
+        self.assertTrue(20 <= art.STORY * art.FRAME_MS / 1000 <= 30)
+        self.assertEqual(art.scene(14, 120, 37), art.scene(14, 120, 37 + art.STORY))
 
+    def test_not_just_two_frames(self):
+        from cavewall import art
+        self.assertGreater(len({tuple(art.frame(14, 120, t)) for t in range(art.STORY)}), 60)
+
+    def test_mammoth_walks_in_from_the_right(self):
+        self.assertLess(self.at(20)["mammoth"][0], self.at(6)["mammoth"][0])
+
+    def test_mammoth_chases_hunters_back_into_the_hut(self):
+        self.assertLess(self.at(76)["mammoth"][0], self.at(58)["mammoth"][0] - 20)
+        early = [h[0] for h in self.at(58)["hunters"]]
+        late = [h[0] for h in self.at(66)["hunters"]]
+        self.assertLess(max(late), max(early))
+        self.assertTrue(all(x < self.at(66)["mammoth"][0] for x in late))
+        self.assertEqual(self.at(80)["hunters"], [None, None])  # hiding in the hut
+
+    def test_mammoth_stops_at_the_fire(self):
+        c = self.at(82)
+        self.assertGreater(c["mammoth"][0], c["fire_r"])
+
+    def test_mammoth_turns_and_goes_home(self):
+        a, b = self.at(90), self.at(98)
+        self.assertEqual(a["mammoth"][1], "right")
+        self.assertGreater(b["mammoth"][0], a["mammoth"][0])
+
+    def test_hunters_dance_and_scratch_an_anthem(self):
+        from cavewall import art
+        self.assertEqual({h[1][0] for h in self.at(art.STORY - 2)["hunters"]}, {"dance"})
+        end = "\n".join(art.frame(14, 120, art.STORY - 1))
+        self.assertTrue(any(a in end for a in art.ANTHEMS))
+        half = "\n".join(art.frame(14, 120, art.STORY - 8))
+        self.assertFalse(any(a in half for a in art.ANTHEMS))  # letter by letter
+
+    def test_rock_wall_with_two_pigments(self):
+        from cavewall import art
+        colors = {c for t in range(0, art.STORY, 3) for row in art.scene(14, 120, t) for _, c in row}
+        self.assertEqual(colors, {"wall", "brown", "brown_fill", "red", "red_fill"})
+        self.assertEqual(set(art.PALETTE), colors)
+
+    def test_anthem_sung_above_the_dancers(self):
+        from cavewall import art
+        c = self.at(art.STORY - 1)
+        y, x = c["anthem_at"]
+        xs = [h[0] for h in c["hunters"]]
+        self.assertEqual(y, c["foot"] - 4)                      # just over their heads
+        self.assertLessEqual(x, min(xs) + 3)                    # starts over the dancers ...
+        self.assertGreaterEqual(x + len(c["anthem"]), max(xs))  # ... and spans them
+        f = art.frame(14, 120, art.STORY - 1)
+        self.assertIn(c["anthem"], f[y])
+
+    def test_sun_glyph(self):
+        from cavewall import art
+        f, cells = art.frame(14, 120, 0), art.scene(14, 120, 0)
+        y = next(i for i, ln in enumerate(f) if "(#)" in ln)
+        self.assertLess(y, 4)                                   # high on the wall
+        self.assertEqual(cells[y][f[y].index("(#)") + 1][1], "red_fill")
+
+    def test_deer_herd_grazes_then_bolts_at_the_trumpet(self):
+        lead = lambda t: self.at(t)["herd"][0][0]
+        self.assertEqual(len(self.at(20)["herd"]), 3)
+        self.assertGreater(lead(30), lead(20))                    # wanders right
+        self.assertGreater(lead(58) - lead(54), lead(30) - lead(26))  # bolts after PRRAAAH
+        self.assertEqual(self.at(90)["herd"], [])                 # gone off the wall
+
+    def test_deer_drawn_with_antlers(self):
+        from cavewall import art
+        self.assertIn("\\Y/", "\n".join(art.frame(14, 120, 30)))
+
+    def test_no_herd_or_sun_when_space_is_tight(self):
+        from cavewall import art
+        self.assertEqual(art.cast(6, 70, 30)["herd"], [])
+
+    def test_no_background_colour(self):
+        from cavewall import art
+        for name, (fg, bg, fg8, bg8) in art.PALETTE.items():
+            if not name.endswith("_fill"):
+                self.assertIsNone(bg, name)       # the terminal's own background shows
+                self.assertIsNone(bg8, name)
+
+    def test_hut_fire_and_hand_stencil(self):
+        from cavewall import art
+        text = "\n".join(art.frame(14, 120, 0))
+        self.assertIn("/##\\", text)            # hut
+        self.assertIn("\\=/", text)             # fire logs
+        self.assertIn("## ## ##", text)         # four fingers
+        self.assertNotIn("||||", text)          # no floating tally marks
+
+    def test_fire_flickers(self):
+        from cavewall import art
+        self.assertGreater(len({tuple(art.frame(14, 120, t)) for t in range(3)}), 1)
 
 if __name__ == "__main__":
     unittest.main()

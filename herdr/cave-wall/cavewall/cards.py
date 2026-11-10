@@ -78,6 +78,40 @@ def build_prompt(tail, cwd):
     return PROMPT.format(cwd=cwd, conversation=convo)
 
 
+_FINISHED = re.compile(r"Implemented:\s*🟢")
+_OPEN = re.compile(r"^\W*Open todos:\s*(.+?)\s*$", re.M | re.I)
+_OPTIONAL = re.compile(r"^\W*Optional todos:\s*(.+?)\s*$", re.M | re.I)
+
+
+def _todo(rx, text):
+    m = rx.search(text)
+    if not m:
+        return None
+    v = m.group(1).strip(" .*`🟢🟠🔴")
+    return "" if v.lower() in ("none", "-", "nothing") else v
+
+
+def settle(card, tail):
+    """Fixed rules after the model, only when the session spoke last.
+    1. 'Open todos:' / 'Optional todos:' lines (see CLAUDE.md) decide outright.
+    2. Else a finished task (status line 'Implemented: 🟢') whose closing message asks nothing
+       (no '?') does not need the developer, even if it offers an extra."""
+    if not tail or tail[-1][0] != "assistant":
+        return card  # the developer spoke last: the model's reading stands
+    last = tail[-1][1]
+    open_, optional = _todo(_OPEN, last), _todo(_OPTIONAL, last)
+    if open_ is not None or optional is not None:
+        if open_:
+            return dict(card, needs_you=True, reason=open_, next=open_)
+        nxt = f"optional: {optional}" if optional else "nothing, done"
+        return dict(card, needs_you=False, reason="", next=nxt)
+    if _FINISHED.search(last) and "?" not in last and card.get("needs_you"):
+        card = dict(card, needs_you=False, reason="")
+        if card.get("next") and not card["next"].startswith("optional: "):
+            card["next"] = "optional: " + card["next"]
+    return card
+
+
 def is_stale(card_mtime, transcript_mtime, grace=60):
     """Card misses newer conversation (grace absorbs bookkeeping lines written after a turn)."""
     return card_mtime is not None and transcript_mtime - card_mtime > grace

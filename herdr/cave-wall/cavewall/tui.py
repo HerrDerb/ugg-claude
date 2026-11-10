@@ -10,10 +10,11 @@ import textwrap
 import time
 import unicodedata
 
-from cavewall import art, board, cards, compat, hook, worktree
+from cavewall import art, board, cards, compat, hook, plugin, worktree
 
 ICON = {"needs_you": "!", "done": "✓", "working": "~", "idle": "·", "blocked": "!", "unknown": "?"}
-HELP = " ↑↓/jk move  ⏎ jump  n new worktree  s seed card  d done  ⌂ = base checkout  r refresh  q quit "
+FRAME_MS, RELOAD_S = art.FRAME_MS, 3  # the painting sets the pace; herdr is asked every 3 s
+HELP = " ↑↓/jk move  ⏎ jump  n new worktree  s seed card  d done  p play  ⌂ = base checkout  r refresh  q quit "
 
 
 def _ask(stdscr, text, attr):
@@ -117,6 +118,21 @@ def _reset(stdscr, row, rows):
     return f"{row['place']} clean on {target} (old branch kept)"
 
 
+EXIT = object()  # returned by actions after which the board must quit
+_POPUP = [False]  # set by run(): popup boards get reopened by the relay
+
+
+def _home_workspace():
+    """Workspace this board lives in: a popup belongs to the workspace it was opened from."""
+    import json
+    try:
+        ctx = json.loads(os.environ.get("HERDR_PLUGIN_CONTEXT_JSON") or "{}")
+    except ValueError:
+        ctx = {}
+    return (ctx.get("workspace_id") or os.environ.get("HERDR_ACTIVE_WORKSPACE_ID")
+            or os.environ.get("HERDR_WORKSPACE_ID") or board.focused_workspace())
+
+
 def _delete(stdscr, row, rows):
     """Confirm and remove the row's worktree and close its terminal. Returns a status message."""
     if not row["is_worktree"]:
@@ -134,11 +150,15 @@ def _delete(stdscr, row, rows):
             return "cancelled"
     elif _ask(stdscr, f" {what} y/N ", curses.color_pair(3)) not in (ord("y"), ord("Y")):
         return "cancelled"
-    if board.focused_workspace() == row["workspace_id"]:
+    if row["workspace_id"] == _home_workspace():
+        # herdr closes this board together with its workspace: hand the job to a detached relay
         safe = board.refuge(rows, row)
         if not safe:
             return "it is the only workspace; closing it would close the board too. Ugg wait."
-        subprocess.run([compat.exe("herdr"), "workspace", "focus", safe], capture_output=True, timeout=5)
+        plugin.spawn_relay(row["workspace_id"], safe, bool(danger),
+                           [r["session_id"] for r in rows if r["workspace_id"] == row["workspace_id"]],
+                           reopen=_POPUP[0])
+        return EXIT
     err = worktree.remove(row["workspace_id"], force=bool(danger))
     if err:
         return f"failed: {err}"
@@ -183,7 +203,7 @@ def _repaint_stale(rows, per_round=3, cooldown=120):
 
 
 _MOVES = (curses.KEY_UP, curses.KEY_DOWN, ord("j"), ord("k"))
-REFRESH_EVERY = 3.0
+REFRESH_EVERY = RELOAD_S
 
 
 def needs_reload(k, loaded_at, now):
@@ -238,7 +258,76 @@ def _put(win, y, x, text, attr=0):
         pass
 
 
+def _pigments():
+    """Curses attributes for the painting: (fg, bg) pairs, 256 colours or the basic 8."""
+    attrs, many = {}, getattr(curses, "COLORS", 8) >= 256
+    for n, (name, (fg, bg, fg8, bg8)) in enumerate(art.PALETTE.items(), 20):
+        try:
+            if many:
+                curses.init_pair(n, -1 if fg is None else fg, -1 if bg is None else bg)
+            else:
+                c8 = lambda c: -1 if c is None else getattr(curses, "COLOR_" + c.upper())
+                curses.init_pair(n, c8(fg8), c8(bg8))
+            attrs[name] = curses.color_pair(n)
+        except curses.error:
+            attrs[name] = 0
+    return attrs
+
+
+def free_area(h, shown):
+    """Rows between the session list and the separator line (h - 7) over the details."""
+    return 2 + shown + 1, h - 8
+
+
+class Player:
+    """The painting stands still until 'p' plays the story once from the start; 'p' again
+    stops it. A new board starts still. Each play sings the next anthem."""
+    STILL = 30  # the still picture: hunters out, mammoth and herd on the wall
+
+    def __init__(self, clock=time.monotonic):
+        self.clock, self.start, self.plays = clock, None, 0
+
+    @property
+    def playing(self):
+        return self.start is not None
+
+    def toggle(self):
+        if self.playing:
+            self.start = None
+        else:
+            self.start, self.plays = self.clock(), self.plays + 1
+
+    def tick(self):
+        """Story tick to draw (the anthem rotates with tick // STORY)."""
+        base = max(0, self.plays - 1) * art.STORY
+        if not self.playing:
+            return base + self.STILL
+        t = int((self.clock() - self.start) * 1000 / FRAME_MS)
+        if t >= art.STORY:
+            self.start = None
+            return base + self.STILL
+        return base + t
+
+
+def _paint(stdscr, top, bottom, w, paint, tick):
+    cells = art.scene(bottom - top + 1, w, tick)
+    if not cells:
+        return
+    y0 = bottom - len(cells) + 1
+    for i, row in enumerate(cells):
+        x = 0
+        while x < len(row):  # one addstr per run of the same colour
+            ch, col = row[x]
+            end = x
+            while end < len(row) and row[end][1] == col:
+                end += 1
+            text = "".join(c for c, _ in row[x:end])
+            _put(stdscr, y0 + i, x, text, paint.get(col, 0))  # blanks too: they are the rock
+            x = end
+
+
 def run(stdscr, close_on_jump=False):
+    _POPUP[0] = close_on_jump
     for setup in (lambda: curses.curs_set(0), curses.use_default_colors):
         try:
             setup()  # not every terminal (e.g. some Windows consoles) supports these
@@ -247,7 +336,8 @@ def run(stdscr, close_on_jump=False):
     for i, c in enumerate((curses.COLOR_RED, curses.COLOR_GREEN, curses.COLOR_YELLOW, curses.COLOR_CYAN), 1):
         curses.init_pair(i, c, -1)
     color = {"needs_you": 1, "done": 2, "working": 3, "blocked": 1}
-    stdscr.timeout(3000)  # auto refresh
+    paint = _pigments()
+    player = Player()  # still until 'p'; a new board starts still
     sel, rows, err = 0, *_load()
     loaded_at = time.monotonic()
     msg = ""
@@ -271,12 +361,8 @@ def run(stdscr, close_on_jump=False):
             mark = "⌂" if r["kind"] == "base" else " "
             line = f" {ICON.get(key, '?')} {mark} {r['place'][:28]:<28} {age:>8}  {r['goal']}"
             _put(stdscr, 2 + i, 0, line.ljust(w), attr)
-        free_top, free_bottom = 2 + min(len(rows), list_h) + 1, h - 7
-        painting = art.pick(free_bottom - free_top + 1, w)
-        if painting:
-            x = max(0, (w - max(map(len, painting))) // 2)
-            for i, line in enumerate(painting):
-                _put(stdscr, free_bottom - len(painting) + 1 + i, x, line, curses.color_pair(3) | curses.A_DIM)
+        free_top, free_bottom = free_area(h, min(len(rows), list_h))
+        _paint(stdscr, free_top, free_bottom, w, paint, player.tick())
         if rows:
             r = rows[sel]
             y = h - 6
@@ -291,10 +377,13 @@ def run(stdscr, close_on_jump=False):
                          curses.color_pair(1) | curses.A_BOLD if label == "YOU" else 0)
                     y += 1
         _put(stdscr, h - 1, 0, f" {msg} " if msg else HELP, curses.A_BOLD if msg else curses.A_DIM)
-        msg = ""
         stdscr.refresh()
 
+        stdscr.timeout(FRAME_MS if player.playing else RELOAD_S * 1000)  # no redraws when still
         k = stdscr.getch()
+        if k == -1 and time.monotonic() - loaded_at < RELOAD_S:
+            continue  # just the next picture of the hunt
+        msg = ""  # a message lives until the next key or reload
         if k in (ord("q"), 27):
             return
         if k in (curses.KEY_DOWN, ord("j")):
@@ -311,10 +400,15 @@ def run(stdscr, close_on_jump=False):
                 board.focus(pane)
                 if close_on_jump:
                     return
+        elif k == ord("p"):
+            player.toggle()
+            continue  # just the painting changed
         elif k == ord("s") and rows:
             msg = _seed(rows[sel])
         elif k == ord("d") and rows:
             msg = _delete(stdscr, rows[sel], rows)
+            if msg is EXIT:
+                return
         if needs_reload(k, loaded_at, time.monotonic()):
             rows, err = _load()
             loaded_at = time.monotonic()
