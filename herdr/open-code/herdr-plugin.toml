@@ -1,0 +1,22 @@
+id = "ugg.opencode"
+name = "Open in VS Code"
+version = "0.1.0"
+min_herdr_version = "0.9.5"
+description = "Open VS Code on the working directory of the focused pane"
+platforms = ["linux", "macos", "windows"]
+
+# Actions run with this folder as working directory, so `-m opencode` resolves.
+
+[[actions]]
+id = "open"
+title = "Open pane folder in VS Code"
+contexts = ["pane", "workspace"]
+platforms = ["linux", "macos"]
+command = ["python3", "-m", "opencode"]
+
+[[actions]]
+id = "open-windows"
+title = "Open pane folder in VS Code"
+contexts = ["pane", "workspace"]
+platforms = ["windows"]
+command = ["py", "-3", "-m", "opencode"]
